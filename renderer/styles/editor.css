@@ -1,0 +1,976 @@
+/* ==========================================================================
+   Word-Style Rich Text Editor (Integrated in App Default UI)
+   ========================================================================== */
+
+#editor-view {
+  position: fixed;
+  inset: 40px 0 0 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  z-index: 250;
+  color: var(--text);
+  font-family: inherit;
+}
+
+#editor-view[hidden] {
+  display: none !important;
+}
+
+/* Editor Header / Title Bar in Default App UI Style */
+#editor-toolbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: 50px;
+  padding: 0 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  user-select: none;
+}
+
+.editor-file-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.editor-file-icon {
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+  flex: none;
+}
+
+.editor-file-meta {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.editor-title-input {
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 5px;
+  outline: none;
+  max-width: 280px;
+  font-family: inherit;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.editor-title-input:hover {
+  background: var(--hover);
+  border-color: var(--field-border);
+}
+
+.editor-title-input:focus {
+  background: var(--field);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1.5px var(--accent);
+}
+
+.editor-badge-saved {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  background: var(--field);
+  border: 1px solid var(--field-border);
+  color: var(--muted);
+  padding: 1px 6px;
+  border-radius: 4px;
+}
+
+.editor-badge-saved.dirty {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+#editor-subtitle {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+#editor-status {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Word Features Ribbon Toolbar in Default App Theme */
+.word-ribbon.ql-toolbar.ql-snow {
+  flex: none;
+  display: flex;
+  align-items: stretch;
+  gap: 4px;
+  background: var(--panel);
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 6px 14px 4px;
+  overflow: visible;
+  user-select: none;
+  position: relative;
+  z-index: 10;
+}
+
+.ribbon-group {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 3px;
+  gap: 3px;
+  overflow: visible;
+  position: relative;
+}
+
+/* Quill Picker Dropdowns — ensure they show above page content and display text */
+.word-ribbon.ql-toolbar.ql-snow .ql-picker {
+  position: relative;
+  overflow: visible;
+  color: var(--text);
+  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  float: none;
+  height: 28px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-label {
+  color: var(--text);
+  border: 1px solid var(--field-border);
+  border-radius: 6px;
+  background: var(--field);
+  padding: 0 6px;
+  height: 28px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-label:hover {
+  border-color: var(--accent);
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-label {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-label svg {
+  right: 6px;
+  stroke: var(--text);
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.ql-font {
+  width: 120px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.ql-size {
+  width: 56px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.word-select-spacing {
+  width: 58px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.ql-header {
+  width: 120px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-options {
+  position: absolute;
+  z-index: 500;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  min-width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  color: var(--text);
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-item {
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 12px;
+  display: block;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-item:hover,
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-item.ql-selected {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   Quill Picker Items Text Content (Fonts, Sizes, Headings)
+   Quill Snow theme items are empty spans that require ::before content rules.
+   ========================================================================== */
+
+/* Font Family Picker */
+.ql-snow .ql-picker.ql-font .ql-picker-label::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item::before {
+  content: "Calibri";
+  font-family: "Calibri", "Segoe UI", sans-serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before {
+  content: "Arial";
+  font-family: Arial, sans-serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before {
+  content: "Times New Roman";
+  font-family: "Times New Roman", Times, serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="georgia"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="georgia"]::before {
+  content: "Georgia";
+  font-family: Georgia, serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="courier"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="courier"]::before {
+  content: "Courier New";
+  font-family: "Courier New", Courier, monospace;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="segoe"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="segoe"]::before {
+  content: "Segoe UI";
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* Font Size Picker */
+.ql-snow .ql-picker.ql-size .ql-picker-label::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item::before {
+  content: "11";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="9pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="9pt"]::before {
+  content: "9";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="10pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="10pt"]::before {
+  content: "10";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="11pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="11pt"]::before {
+  content: "11";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="12pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="12pt"]::before {
+  content: "12";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="14pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="14pt"]::before {
+  content: "14";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="16pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16pt"]::before {
+  content: "16";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="18pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="18pt"]::before {
+  content: "18";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="20pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20pt"]::before {
+  content: "20";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="24pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="24pt"]::before {
+  content: "24";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="28pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="28pt"]::before {
+  content: "28";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="36pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="36pt"]::before {
+  content: "36";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="48pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="48pt"]::before {
+  content: "48";
+}
+
+/* Styles / Headings Picker */
+.ql-snow .ql-picker.ql-header .ql-picker-label::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item::before {
+  content: "Normal Text";
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="1"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="1"]::before {
+  content: "Heading 1";
+  font-size: 15px;
+  font-weight: 700;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="2"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="2"]::before {
+  content: "Heading 2";
+  font-size: 13px;
+  font-weight: 700;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="3"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="3"]::before {
+  content: "Heading 3";
+  font-size: 12px;
+  font-weight: 600;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="4"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="4"]::before {
+  content: "Heading 4";
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Line Spacing Picker */
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-label]:not([data-label=''])::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-label]:not([data-label=''])::before {
+  content: attr(data-label);
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item::before {
+  content: "1.15";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.0"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.0"]::before {
+  content: "1.0";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.15"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.15"]::before {
+  content: "1.15";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.25"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.25"]::before {
+  content: "1.25";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.45"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.45"]::before {
+  content: "1.45";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.5"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.5"]::before {
+  content: "1.5";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="2.0"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="2.0"]::before {
+  content: "2.0";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="2.5"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="2.5"]::before {
+  content: "2.5";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="3.0"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="3.0"]::before {
+  content: "3.0";
+}
+
+/* Native selects inside ribbon — ensure they show above content */
+.word-ribbon select,
+.word-ribbon .word-select-spacing,
+.word-ribbon .word-select-font,
+.word-ribbon .word-select-size,
+.word-ribbon .word-select-header {
+  position: relative;
+  z-index: 5;
+}
+
+.ribbon-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow: visible;
+  position: relative;
+}
+
+.ribbon-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+  margin-top: 1px;
+}
+
+.ribbon-sep {
+  width: 1px;
+  background: var(--border);
+  margin: 2px 4px 6px;
+  align-self: stretch;
+}
+
+.ribbon-sub-sep {
+  width: 1px;
+  height: 18px;
+  background: var(--field-border);
+  margin: 0 3px;
+}
+
+/* Ribbon Buttons & Pickers */
+.word-ribbon.ql-toolbar.ql-snow .ribbon-icon-btn,
+.word-ribbon button.ql-bold,
+.word-ribbon button.ql-italic,
+.word-ribbon button.ql-underline,
+.word-ribbon button.ql-strike,
+.word-ribbon button.ql-script,
+.word-ribbon button.ql-list,
+.word-ribbon button.ql-indent,
+.word-ribbon button.ql-align,
+.word-ribbon button.ql-blockquote,
+.word-ribbon button.ql-code-block,
+.word-ribbon button.ql-link,
+.word-ribbon button.ql-image,
+.word-ribbon button.ql-clean {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid transparent;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.1s, border-color 0.1s, color 0.1s;
+}
+
+.ribbon-icon-btn svg,
+.word-ribbon button svg {
+  width: 16px;
+  height: 16px;
+}
+
+.ribbon-icon-btn:hover,
+.word-ribbon button:hover {
+  background: var(--hover);
+}
+
+.word-ribbon button.ql-active,
+.ribbon-icon-btn.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ribbon-feature-btn,
+.ribbon-feature-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  width: auto;
+  padding: 0 10px;
+  border-radius: 6px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s, color 0.12s;
+}
+
+.ribbon-feature-btn svg {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+}
+
+.ribbon-feature-btn:hover {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Word Select Dropdowns in Default Theme */
+.word-select-font,
+.word-select-size,
+.word-select-spacing,
+.word-select-header {
+  height: 28px;
+  border-radius: 6px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  color: var(--text);
+  font-size: 11px;
+  font-family: inherit;
+  padding: 0 6px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.word-select-font {
+  width: 115px;
+}
+
+.word-select-size {
+  width: 54px;
+}
+
+.word-select-spacing {
+  width: 58px;
+}
+
+.word-select-header {
+  width: 115px;
+  font-weight: 600;
+}
+
+.word-select-font:hover,
+.word-select-size:hover,
+.word-select-spacing:hover,
+.word-select-header:hover {
+  border-color: var(--accent);
+}
+
+.word-select-font:focus,
+.word-select-size:focus,
+.word-select-spacing:focus,
+.word-select-header:focus {
+  border-color: var(--accent);
+  outline: 1.5px solid var(--accent);
+}
+
+/* Ensure native select options have explicit, legible background & color in all themes */
+select option {
+  background-color: var(--surface, #ffffff);
+  color: var(--text, #111827);
+  padding: 6px 10px;
+}
+
+:root[data-theme="dark"] select option {
+  background-color: var(--surface, #1b212c);
+  color: var(--text, #f0f3f6);
+}
+
+.word-color-tool.ql-picker {
+  height: 28px;
+}
+
+/* Options Drawer */
+#editor-options {
+  flex: none;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+#editor-options[hidden] {
+  display: none !important;
+}
+
+.opt-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.opt-field > span {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.opt-field select,
+.opt-field input[type="text"] {
+  height: 30px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--field-border);
+  background: var(--field);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.opt-field select:focus,
+.opt-field input[type="text"]:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
+}
+
+.opt-field input[type="text"] {
+  min-width: 140px;
+}
+
+.opt-field.opt-grow input[type="text"] {
+  min-width: 170px;
+}
+
+.opt-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  align-self: flex-end;
+}
+
+.opt-check input {
+  accent-color: var(--accent);
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.opt-check span {
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text);
+}
+
+/* Word Desk Workspace */
+.word-workspace {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  align-items: safe center;
+  padding: 28px 24px 64px;
+}
+
+/* Word Physical Paper Sheet */
+.word-page-sheet {
+  width: 816px;
+  min-height: 1056px;
+  background: #ffffff;
+  color: #111827;
+  border-radius: 2px;
+  box-shadow: var(--page-shadow);
+  margin: 0 auto;
+  position: relative;
+  transition: transform 0.12s ease, width 0.15s ease;
+  transform-origin: top center;
+}
+
+/* Document Body inside Paper Sheet */
+.word-editor-content.ql-container.ql-snow {
+  border: none;
+  font-family: "Calibri", "Segoe UI", Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.45;
+  background: transparent;
+  color: #111827;
+}
+
+.word-editor-content .ql-editor {
+  padding: 56px 64px 80px;
+  min-height: 1056px;
+  outline: none;
+  caret-color: var(--accent);
+  color: #111827;
+  line-height: 1.45;
+}
+
+.word-editor-content .ql-editor p {
+  margin-bottom: 6px;
+}
+
+.word-editor-content .ql-editor h1 {
+  font-size: 22pt;
+  font-weight: 700;
+  color: #111827;
+  margin: 20px 0 8px;
+  line-height: 1.25;
+}
+
+.word-editor-content .ql-editor h2 {
+  font-size: 16pt;
+  font-weight: 700;
+  color: #1f2937;
+  margin: 16px 0 6px;
+  line-height: 1.3;
+}
+
+.word-editor-content .ql-editor h3 {
+  font-size: 13pt;
+  font-weight: 700;
+  color: #374151;
+  margin: 12px 0 4px;
+  line-height: 1.35;
+}
+
+.word-editor-content .ql-editor h4 {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #4b5563;
+  margin: 10px 0 4px;
+}
+
+.word-editor-content .ql-editor a {
+  color: #2563eb;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.word-editor-content .ql-editor a:hover {
+  color: #1d4ed8;
+}
+
+.word-editor-content .ql-editor blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 16px;
+  margin: 12px 0;
+  color: #4b5563;
+  font-style: italic;
+}
+
+.word-editor-content .ql-editor pre {
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 10px 14px;
+  font-family: "Courier New", Courier, monospace;
+  font-size: 10pt;
+  margin: 12px 0;
+  color: #1f2937;
+}
+
+.word-editor-content .ql-editor hr {
+  border: none;
+  border-top: 1px solid #d1d5db;
+  margin: 20px 0;
+}
+
+/* Word Page Break Visual Separator */
+.word-page-break-container {
+  margin: 32px 0 !important;
+  text-align: center;
+}
+
+.word-page-break {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  margin: 36px -64px;
+  user-select: none;
+  position: relative;
+}
+
+.word-page-break::before,
+.word-page-break::after {
+  content: "";
+  flex: 1;
+  border-bottom: 2px dashed #9ca3af;
+  opacity: 0.8;
+}
+
+.word-page-break > span,
+.word-page-break-badge {
+  padding: 3px 14px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #4b5563;
+  background: #edf0f5;
+  border: 1px solid #cbd5e1;
+  border-radius: 999px;
+  margin: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+/* Status Bar in Default App Theme */
+.word-status-bar {
+  flex: none;
+  height: 32px;
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  font-size: 11px;
+  user-select: none;
+  z-index: 10;
+}
+
+.word-status-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.word-status-pill {
+  color: var(--muted);
+}
+
+.word-status-sep {
+  color: var(--border);
+}
+
+.word-status-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.word-status-hint {
+  color: var(--muted);
+}
+
+.word-status-hint kbd {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  color: var(--text);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 10px;
+}
+
+.word-zoom-widget {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--field);
+  border: 1px solid var(--field-border);
+  padding: 2px 6px;
+  border-radius: 5px;
+}
+
+.word-zoom-btn {
+  background: transparent;
+  color: var(--text);
+  border: none;
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.word-zoom-btn:hover {
+  background: var(--hover);
+}
+
+.word-zoom-text {
+  font-size: 11px;
+  font-weight: 600;
+  min-width: 34px;
+  text-align: center;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ==========================================================================
+   Image Resize Handles (Word-style)
+   ========================================================================== */
+.ql-editor img {
+  cursor: pointer;
+}
+
+.ql-editor img.img-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  cursor: default;
+}
+
+.img-resize-wrapper {
+  position: absolute;
+  pointer-events: none;
+  z-index: 50;
+  box-sizing: border-box;
+  border: 1px dashed rgba(229, 72, 77, 0.4);
+}
+
+.img-resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 2px solid var(--accent, #e5484d);
+  border-radius: 2px;
+  pointer-events: auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  z-index: 51;
+  transition: transform 0.1s;
+}
+
+.img-resize-handle:hover {
+  transform: scale(1.3);
+  background: var(--accent, #e5484d);
+  border-color: var(--accent, #e5484d);
+}
+
+.img-resize-handle.nw { top: -5px; left: -5px; cursor: nw-resize; }
+.img-resize-handle.n  { top: -5px; left: calc(50% - 5px); cursor: n-resize; }
+.img-resize-handle.ne { top: -5px; right: -5px; cursor: ne-resize; }
+.img-resize-handle.w  { top: calc(50% - 5px); left: -5px; cursor: w-resize; }
+.img-resize-handle.e  { top: calc(50% - 5px); right: -5px; cursor: e-resize; }
+.img-resize-handle.sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+.img-resize-handle.s  { bottom: -5px; left: calc(50% - 5px); cursor: s-resize; }
+.img-resize-handle.se { bottom: -5px; right: -5px; cursor: se-resize; }
+
+.img-resize-tooltip {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel, #fff);
+  color: var(--muted, #6b7280);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #e2e4e8);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 52;
+}

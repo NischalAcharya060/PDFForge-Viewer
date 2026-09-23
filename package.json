@@ -12,7 +12,7 @@
     "build": "electron-builder",
     "build:dir": "electron-builder --dir",
     "dist": "electron-builder --win nsis",
-    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/rich-to-pdf.js && node --check renderer/viewer.js",
+    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/services/rich-to-pdf.js && node --check electron/services/text-to-pdf.js && node --check electron/utils/pdf-helpers.js",
     "test": "npm run lint && npm run test:rich",
     "test:rich": "node scripts/rich-smoke.js"
   },
@@ -43,6 +43,8 @@
       "!node_modules/pdfjs-dist/**/*.map",
       "!node_modules/pdf-lib/**/*.map",
       "!node_modules/quill/**/*.map",
+      "!renderer/viewer.js",
+      "!renderer/styles.css",
       "package.json"
     ],
     "win": {

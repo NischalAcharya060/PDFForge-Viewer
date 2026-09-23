@@ -1,6 +1,6 @@
 const fs = require("node:fs");
 const path = require("node:path");
-const { richToPdf } = require("../electron/rich-to-pdf");
+const { richToPdf } = require("../electron/services/rich-to-pdf");
 
 const html = [
   "<h1>PDFForge rich text test</h1>",

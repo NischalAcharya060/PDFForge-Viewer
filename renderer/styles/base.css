@@ -1,0 +1,87 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+:root {
+  color-scheme: light dark;
+  --bg: #202020;
+  --panel: #2c2c2c;
+  --surface: #2d2d2d;
+  --surface-card: #323232;
+  --page-shadow: 0 4px 16px rgba(0, 0, 0, 0.4), 0 12px 36px rgba(0, 0, 0, 0.35);
+  --border: rgba(255, 255, 255, 0.08);
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --text: #ffffff;
+  --muted: #a0a0a0;
+  --accent: #ff5c60;
+  --accent-strong: #e5484d;
+  --accent-soft: rgba(255, 92, 96, 0.16);
+  --hover: rgba(255, 255, 255, 0.06);
+  --active: rgba(255, 255, 255, 0.10);
+  --overlay: rgba(18, 18, 18, 0.75);
+  --field: #242424;
+  --field-border: rgba(255, 255, 255, 0.14);
+  --kbd-bg: #2d2d2d;
+  --kbd-border: rgba(255, 255, 255, 0.15);
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --tab-bar-height: 40px;
+  --toolbar-height: 48px;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  font-family:
+    "Segoe UI Variable Text",
+    "Segoe UI Variable Display",
+    "Segoe UI",
+    system-ui,
+    -apple-system,
+    Roboto,
+    Inter,
+    sans-serif;
+  font-size: 13.5px;
+  line-height: 1.5;
+  user-select: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 9px;
+  height: 9px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--field-border);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+  background-clip: padding-box;
+}

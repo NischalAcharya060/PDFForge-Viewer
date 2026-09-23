@@ -9,7 +9,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23e5484d'/%3E%3Cpath d='M6 9V4h8l3 3v13H6V9z' fill='%23fff'/%3E%3C/svg%3E" />
     <link rel="stylesheet" href="./quill/quill.snow.css" />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles/base.css" />
+    <link rel="stylesheet" href="./styles/layout.css" />
+    <link rel="stylesheet" href="./styles/viewer.css" />
+    <link rel="stylesheet" href="./styles/editor.css" />
+    <link rel="stylesheet" href="./styles/modals.css" />
+    <link rel="stylesheet" href="./styles/components.css" />
+    <link rel="stylesheet" href="./styles/themes.css" />
     <title>PDFForge Viewer</title>
   </head>
   <body>
@@ -979,6 +985,6 @@
     <div id="toast-container" class="toast-container" aria-live="polite"></div>
 
     <script src="./quill/quill.js"></script>
-    <script type="module" src="./viewer.js"></script>
+    <script type="module" src="./core/init.js"></script>
   </body>
 </html>
