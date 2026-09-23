@@ -16,6 +16,9 @@ export const el = {
   splitDivider: document.getElementById("split-divider"),
   secondaryPane: document.getElementById("secondary-pane"),
   secondaryPaneTitle: document.getElementById("secondary-pane-title"),
+  splitDocSelect: document.getElementById("split-doc-select"),
+  btnSplitOpen: document.getElementById("btn-split-open"),
+  splitPageIndicator: document.getElementById("split-page-indicator"),
   btnCloseSplit: document.getElementById("btn-close-split"),
   secondaryPageHost: document.getElementById("secondary-page-host"),
   btnNew: document.getElementById("btn-new"),
@@ -134,6 +137,7 @@ export const el = {
   ctxCloseOthers: document.getElementById("ctx-close-others"),
   ctxCloseRight: document.getElementById("ctx-close-right"),
   ctxDuplicateTab: document.getElementById("ctx-duplicate-tab"),
+  ctxOpenSplit: document.getElementById("ctx-open-split"),
   ctxNewTab: document.getElementById("ctx-new-tab"),
   // Image Insert Modal
   imageInsertModal: document.getElementById("image-insert-modal"),

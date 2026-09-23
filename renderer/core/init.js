@@ -27,7 +27,7 @@ import { clearRecentFiles, renderRecentFiles } from '../services/recent-files.js
 import { persistPdfOptions } from '../services/pdf-options.js';
 
 // Features — Tabs
-import { createNewTab, closeTab, cycleTabs, openMultipleFiles, toggleTwoPage, toggleSplitView, closeSplitView, setupSplitDivider, renderTabBar, snapshotCurrentTab, restoreTab, showTabContextMenu, hideTabContextMenu, closeOtherTabs, closeTabsToRight, duplicateTab } from '../features/tabs/tabs.js';
+import { createNewTab, closeTab, cycleTabs, openMultipleFiles, toggleTwoPage, toggleSplitView, closeSplitView, setupSplitDivider, renderTabBar, snapshotCurrentTab, restoreTab, showTabContextMenu, hideTabContextMenu, closeOtherTabs, closeTabsToRight, duplicateTab, openTabInSplit, openSplitFile, onSplitDocSelectChange } from '../features/tabs/tabs.js';
 
 // Features — Viewer
 import { layoutPages, computeCurrentPage, collectVisiblePages, scrollToPage, prevPage, nextPage, setFit, zoomIn, zoomOut, zoomBy, actualSize, rotateClockwise, syncFitButtons, addBlankPageToCurrentDoc, appendPdfToCurrentDoc } from '../features/viewer/viewer.js';
@@ -102,6 +102,11 @@ function bindEvents() {
       if (contextMenuTargetTabId) duplicateTab(contextMenuTargetTabId);
     });
   }
+  if (el.ctxOpenSplit) {
+    el.ctxOpenSplit.addEventListener("click", () => {
+      if (contextMenuTargetTabId) openTabInSplit(contextMenuTargetTabId);
+    });
+  }
   if (el.ctxNewTab) {
     el.ctxNewTab.addEventListener("click", () => {
       hideTabContextMenu();
@@ -110,6 +115,11 @@ function bindEvents() {
   }
 
   setupSplitDivider();
+
+  if (el.btnSplitView) el.btnSplitView.addEventListener("click", toggleSplitView);
+  if (el.btnCloseSplit) el.btnCloseSplit.addEventListener("click", closeSplitView);
+  if (el.btnSplitOpen) el.btnSplitOpen.addEventListener("click", openSplitFile);
+  if (el.splitDocSelect) el.splitDocSelect.addEventListener("change", onSplitDocSelectChange);
 
   if (el.tabsList) {
     el.tabsList.addEventListener("wheel", (e) => {

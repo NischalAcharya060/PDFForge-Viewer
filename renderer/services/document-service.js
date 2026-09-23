@@ -43,10 +43,13 @@ export async function destroyDocument() {
     state.loadingTask = null;
   }
   if (state.doc) {
-    try {
-      await state.doc.destroy();
-    } catch {
-      // ignore
+    const docInOtherTab = Array.isArray(tabs) && tabs.some((t) => t.id !== activeTabId && t.doc === state.doc);
+    if (!docInOtherTab) {
+      try {
+        await state.doc.destroy();
+      } catch {
+        // ignore
+      }
     }
   }
   state.doc = null;
@@ -96,7 +99,14 @@ function showPasswordModal(note) {
 }
 
 export async function openDocument(data, name, filePath) {
-  if (!leaveEditor()) return;
+  const currentTab = tabs ? tabs.find((t) => t.id === activeTabId) : null;
+  if (currentTab && currentTab.type === "editor") {
+    if (!leaveEditor()) return;
+  }
+  state.editor.active = false;
+  state.editor.dirty = false;
+  if (el.editorView) el.editorView.hidden = true;
+  if (el.toolbar) el.toolbar.hidden = false;
   hideAllOverlays();
   setLoading(true);
   el.errorState.hidden = true;
@@ -105,10 +115,12 @@ export async function openDocument(data, name, filePath) {
   state.passwordValue = null;
   state.rotation = 0;
   state.filePath = filePath || null;
-  state.data = data;
+  const rawBytes = data instanceof Uint8Array ? data : new Uint8Array(data);
+  state.data = rawBytes.slice();
   await destroyDocument();
   try {
-    const task = getDocument({ data, password: state.passwordValue });
+    const workerBytes = rawBytes.slice();
+    const task = getDocument({ data: workerBytes, password: state.passwordValue });
     task.onPassword = (update, reason) => {
       state.passwordCallback = update;
       const prompt = reason === 2 ? "The password is incorrect. Try again." : "This PDF requires a password to open.";
@@ -124,16 +136,11 @@ export async function openDocument(data, name, filePath) {
     saveRecentFile(name, filePath);
     await buildPages(state.doc);
     await buildOutline(state.doc);
-    // Note: To avoid circular dependency with tabs state, we access it via state or imports.
-    // However, the original code used global tabs array.
-    // We assume tabs and activeTabId are imported from state.js or tabs.js
-    // Let's import them from state.js
-    const currentTab = tabs ? tabs.find((t) => t.id === activeTabId) : null;
     if (currentTab) {
       currentTab.type = "pdf";
       currentTab.name = name;
       currentTab.filePath = filePath;
-      currentTab.data = data;
+      currentTab.data = state.data;
       currentTab.doc = state.doc;
       currentTab.pages = state.pages;
       currentTab.outline = state.outline;

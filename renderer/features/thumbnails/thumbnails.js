@@ -4,6 +4,7 @@ import { scrollToPage, layoutPages } from '../viewer/viewer.js';
 
 export const MAX_CONCURRENT_THUMB_RENDERS = 2;
 export let thumbsVisible = true;
+export function setThumbsVisible(v) { thumbsVisible = Boolean(v); }
 let thumbRenderGen = 0;
 let thumbRenderActive = 0;
 
@@ -122,6 +123,7 @@ export function scheduleNextThumbRender() {
 
 export function updateThumbFromPageCanvas(p) {
   if (!p || !p.canvas || !p.thumbCanvas || !p.thumbDiv || !p.page) return;
+  if (!p.rendered || p.canvas.width <= 0 || p.canvas.height <= 0) return;
   const c = p.thumbCanvas;
   const rot = (p.page.rotate + state.rotation) % 360;
   const vp1 = p.page.getViewport({ scale: 1, rotation: rot });
@@ -191,10 +193,12 @@ export async function renderSingleThumb(p, gen) {
   if (p.thumbRendered || p.thumbRendering || !p.thumbCanvas || !p.page) return;
 
   // If already rendered on the main canvas, copy instantly via drawImage
-  if (p.rendered && p.canvas && p.canvas.width > 0) {
+  if (p.rendered && p.canvas && p.canvas.width > 0 && p.canvas.height > 0) {
     updateThumbFromPageCanvas(p);
-    scheduleNextThumbRender();
-    return;
+    if (p.thumbRendered) {
+      scheduleNextThumbRender();
+      return;
+    }
   }
 
   // If main page is currently painting, defer so we never conflict with main reader

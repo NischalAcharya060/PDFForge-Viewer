@@ -1,15 +1,45 @@
-import { state, tabs, activeTabId, splitTabId, isSplitActive, tabCounter, splitDoc, splitPages, tabDragSourceId, contextMenuTargetTabId, setActiveTabId, setSplitTabId, setIsSplitActive, setTabCounter, setSplitDoc, setSplitPages, setTabDragSourceId, setContextMenuTargetTabId } from '../../core/state.js';
+import {
+  state,
+  tabs,
+  activeTabId,
+  splitTabId,
+  isSplitActive,
+  tabCounter,
+  splitDoc,
+  splitPages,
+  tabDragSourceId,
+  contextMenuTargetTabId,
+  quill,
+  setActiveTabId,
+  setSplitTabId,
+  setIsSplitActive,
+  setTabCounter,
+  setSplitDoc,
+  setSplitPages,
+  setTabDragSourceId,
+  setContextMenuTargetTabId,
+} from '../../core/state.js';
 import { el } from '../../core/elements.js';
-import { layoutPages, updateControls, syncFitButtons, updateZoomSelect } from '../viewer/viewer.js';
+import { layoutPages, updateControls, syncFitButtons, updateZoomSelect, queueVisibleRender } from '../viewer/viewer.js';
 import { openDocument, hideAllOverlays } from '../../services/document-service.js';
-import { updateEditorChrome, exitEditor, openTextEditor } from '../editor/editor.js';
-import { escapeHtml } from '../../utils/helpers.js';
+import { updateEditorChrome, openTextEditor } from '../editor/editor.js';
+import { escapeHtml, clamp } from '../../utils/helpers.js';
+import { getDocument } from '../../pdfjs/pdf.mjs';
+import {
+  buildThumbnails,
+  applyThumbnails,
+  queueThumbRenders,
+  updateActiveThumb,
+  thumbsVisible,
+  setThumbsVisible,
+  renderOutlineItems,
+} from '../thumbnails/thumbnails.js';
 
 export function showTabContextMenu(x, y, tabId) {
   if (!el.tabContextMenu) return;
   setContextMenuTargetTabId(tabId);
   const menuW = 190;
-  const menuH = 180;
+  const menuH = 220;
   const posX = Math.min(x, Math.max(10, window.innerWidth - menuW - 10));
   const posY = Math.min(y, Math.max(10, window.innerHeight - menuH - 10));
   el.tabContextMenu.style.left = `${posX}px`;
@@ -59,6 +89,14 @@ export function duplicateTab(targetId) {
   }
 }
 
+export function openTabInSplit(targetId) {
+  hideTabContextMenu();
+  const tab = tabs.find((t) => t.id === targetId);
+  if (tab && (tab.data || tab.doc)) {
+    void openSplitView(tab);
+  }
+}
+
 export function renderTabBar() {
   if (!el.tabsList) return;
   el.tabsList.innerHTML = "";
@@ -92,8 +130,9 @@ export function renderTabBar() {
       </svg>`;
     }
 
-    const isDirty = (tab.type === "editor" && (tab.editor?.dirty || (tab.id === activeTabId && state.editor.dirty))) ||
-                    Boolean(tab.dirty || (tab.id === activeTabId && state.pdfModified));
+    const isDirty =
+      (tab.type === "editor" && (tab.editor?.dirty || (tab.id === activeTabId && state.editor.dirty))) ||
+      Boolean(tab.dirty || (tab.id === activeTabId && state.pdfModified));
 
     tabEl.innerHTML = `
       <span class="chrome-tab-icon">${iconSvg}</span>
@@ -184,7 +223,7 @@ export function snapshotCurrentTab() {
   const currentTab = tabs.find((t) => t.id === activeTabId);
   if (!currentTab) return;
 
-  if (state.editor.active) {
+  if (state.editor.active && currentTab.type === "editor") {
     currentTab.type = "editor";
     currentTab.name = state.editor.fileName || "Document";
     currentTab.editor = {
@@ -195,29 +234,25 @@ export function snapshotCurrentTab() {
       html: quill ? quill.getSemanticHTML() : "",
       options: { ...(state.editor.options || {}) },
     };
-  } else if (state.doc) {
+  } else if (state.doc || currentTab.type === "pdf") {
     currentTab.type = "pdf";
-    currentTab.name = state.name;
-    currentTab.filePath = state.filePath;
-    currentTab.data = state.data;
-    currentTab.doc = state.doc;
-    currentTab.pages = state.pages;
-    currentTab.outline = state.outline;
-    currentTab.currentPage = state.currentPage;
-    currentTab.zoom = state.zoom;
-    currentTab.layoutMode = state.layoutMode;
+    currentTab.name = state.name || currentTab.name;
+    currentTab.filePath = state.filePath || currentTab.filePath;
+    if (state.data) {
+      currentTab.data = (state.data instanceof Uint8Array ? state.data : new Uint8Array(state.data)).slice();
+    }
+    currentTab.doc = state.doc || currentTab.doc;
+    currentTab.pages = state.pages || currentTab.pages;
+    currentTab.outline = state.outline || currentTab.outline;
+    currentTab.currentPage = state.currentPage || 1;
+    currentTab.zoom = state.zoom || 1;
+    currentTab.layoutMode = state.layoutMode || "fit-width";
     currentTab.twoPageMode = Boolean(state.twoPageMode);
-    currentTab.rotation = state.rotation;
+    currentTab.rotation = state.rotation || 0;
+    currentTab.sidebarVisible = Boolean(thumbsVisible);
+    currentTab.activeSidebarTab = state.activeSidebarTab || "thumbs";
     currentTab.scrollTop = el.pageHost ? el.pageHost.scrollTop : 0;
     currentTab.scrollLeft = el.pageHost ? el.pageHost.scrollLeft : 0;
-    currentTab.pageHostFragment = document.createDocumentFragment();
-    while (el.pageHost && el.pageHost.firstChild) {
-      currentTab.pageHostFragment.appendChild(el.pageHost.firstChild);
-    }
-    currentTab.thumbFragment = document.createDocumentFragment();
-    while (el.thumbList && el.thumbList.firstChild) {
-      currentTab.thumbFragment.appendChild(el.thumbList.firstChild);
-    }
   } else {
     currentTab.type = "empty";
     currentTab.name = "New Tab";
@@ -229,9 +264,12 @@ export function restoreTab(tab) {
   hideAllOverlays();
 
   if (tab.type === "editor") {
+    state.editor.active = true;
+    state.doc = null;
+    state.pages = [];
     if (el.pageHost) el.pageHost.textContent = "";
     if (el.thumbList) el.thumbList.textContent = "";
-    el.thumbnails.hidden = true;
+    if (el.thumbnails) el.thumbnails.hidden = true;
     el.emptyState.hidden = true;
     el.errorState.hidden = true;
     el.editorView.hidden = false;
@@ -244,6 +282,9 @@ export function restoreTab(tab) {
     state.editor.dirty = Boolean(editorData.dirty);
     updateEditorChrome();
   } else if (tab.type === "pdf") {
+    state.editor.active = false;
+    state.editor.dirty = false;
+    state.editor.saving = false;
     el.editorView.hidden = true;
     if (el.toolbar) el.toolbar.hidden = false;
     el.emptyState.hidden = true;
@@ -261,12 +302,21 @@ export function restoreTab(tab) {
     state.twoPageMode = Boolean(tab.twoPageMode);
     state.rotation = tab.rotation || 0;
 
+    // Restore sidebar visibility for this tab
+    if (typeof tab.sidebarVisible === "boolean") {
+      setThumbsVisible(tab.sidebarVisible);
+    }
+    if (el.thumbnails) {
+      el.thumbnails.hidden = !thumbsVisible;
+    }
+    if (el.btnThumbs) {
+      el.btnThumbs.classList.toggle("active", thumbsVisible);
+    }
+
+    // Restore pages into pageHost
     if (el.pageHost) {
       el.pageHost.textContent = "";
-      if (tab.pageHostFragment && tab.pageHostFragment.childNodes.length > 0) {
-        el.pageHost.appendChild(tab.pageHostFragment);
-        tab.pageHostFragment = null;
-      } else if (state.pages && state.pages.length) {
+      if (state.pages && state.pages.length) {
         for (const p of state.pages) {
           if (p.div) el.pageHost.appendChild(p.div);
         }
@@ -281,14 +331,31 @@ export function restoreTab(tab) {
     el.docName.title = state.filePath ? `${state.name} (${state.filePath})` : state.name;
     document.title = `${state.name} — PDFForge Viewer`;
 
-    if (tab.thumbFragment && tab.thumbFragment.childNodes.length > 0) {
+    // Restore thumbnails into thumbList
+    if (el.thumbList) {
       el.thumbList.textContent = "";
-      el.thumbList.appendChild(tab.thumbFragment);
-      tab.thumbFragment = null;
-      applyThumbnails();
-      queueThumbRenders();
-    } else {
-      buildThumbnails();
+      if (state.pages && state.pages.length && state.pages.some((p) => p.thumbDiv)) {
+        for (const p of state.pages) {
+          if (p.thumbDiv) el.thumbList.appendChild(p.thumbDiv);
+        }
+        applyThumbnails();
+        queueThumbRenders();
+      } else if (state.doc) {
+        buildThumbnails();
+      }
+    }
+
+    // Restore outline if present
+    if (el.outlineList) {
+      if (state.outline && state.outline.length) {
+        el.outlineList.textContent = "";
+        const container = document.createElement("div");
+        container.className = "outline-tree";
+        renderOutlineItems(state.outline, container, 0);
+        el.outlineList.appendChild(container);
+      } else {
+        el.outlineList.innerHTML = '<div class="empty-outline">No outline in this document</div>';
+      }
     }
 
     updateZoomSelect();
@@ -301,12 +368,15 @@ export function restoreTab(tab) {
     }
     queueVisibleRender();
   } else {
+    state.editor.active = false;
+    state.editor.dirty = false;
+    state.editor.saving = false;
     el.editorView.hidden = true;
     if (el.toolbar) el.toolbar.hidden = false;
     el.errorState.hidden = true;
     if (el.pageHost) el.pageHost.textContent = "";
     if (el.thumbList) el.thumbList.textContent = "";
-    el.thumbnails.hidden = true;
+    if (el.thumbnails) el.thumbnails.hidden = true;
     state.doc = null;
     state.pages = [];
     state.name = "";
@@ -318,18 +388,22 @@ export function restoreTab(tab) {
   }
 
   renderTabBar();
+  if (isSplitActive) {
+    updateSplitDocSelect();
+  }
 }
 
 export function createNewTab(opts = {}) {
   snapshotCurrentTab();
   setTabCounter(tabCounter + 1);
   const id = 'tab-' + tabCounter;
+  const rawBytes = opts.data ? (opts.data instanceof Uint8Array ? opts.data : new Uint8Array(opts.data)).slice() : null;
   const newTab = {
     id,
     type: opts.type || 'empty',
     name: opts.name || (opts.type === 'editor' ? 'Document1' : 'New Tab'),
     filePath: opts.filePath || null,
-    data: opts.data || null,
+    data: rawBytes,
     doc: null,
     pages: [],
     outline: [],
@@ -338,13 +412,15 @@ export function createNewTab(opts = {}) {
     layoutMode: 'fit-width',
     twoPageMode: false,
     rotation: 0,
+    sidebarVisible: Boolean(thumbsVisible),
+    activeSidebarTab: 'thumbs',
     editor: opts.editor || null,
   };
   tabs.push(newTab);
   restoreTab(newTab);
 
   if (opts.data && opts.name) {
-    openDocument(opts.data, opts.name, opts.filePath);
+    void openDocument(opts.data, opts.name, opts.filePath);
   }
   return newTab;
 }
@@ -369,7 +445,12 @@ export async function closeTab(tabId) {
   }
 
   if (splitTabId === tabId) {
-    closeSplitView();
+    const nextSplitTab = tabs.find((t) => t.id !== tabId && (t.data || t.doc));
+    if (nextSplitTab) {
+      void openSplitView(nextSplitTab);
+    } else {
+      closeSplitView();
+    }
   }
 
   if (activeTabId === tabId) {
@@ -393,6 +474,9 @@ export async function closeTab(tabId) {
     restoreTab(tabs[nextIndex]);
   } else {
     renderTabBar();
+    if (isSplitActive) {
+      updateSplitDocSelect();
+    }
   }
 }
 
@@ -413,7 +497,8 @@ export async function openMultipleFiles(files) {
     if (i === 0 && currentTab && currentTab.type === "empty") {
       await openDocument(f.data, f.name, f.path);
     } else {
-      createNewTab({ type: "pdf", name: f.name, data: f.data, filePath: f.path });
+      createNewTab({ type: "pdf", name: f.name, filePath: f.path });
+      await openDocument(f.data, f.name, f.path);
     }
   }
 }
@@ -427,6 +512,83 @@ export function toggleTwoPage() {
   updateControls();
 }
 
+export function updateSplitDocSelect() {
+  if (!el.splitDocSelect) return;
+  el.splitDocSelect.innerHTML = "";
+
+  const pdfTabs = tabs.filter((t) => t.data || t.doc || t.type === "pdf");
+
+  if (!pdfTabs.length) {
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "No documents open";
+    el.splitDocSelect.appendChild(opt);
+  } else {
+    for (const t of pdfTabs) {
+      const opt = document.createElement("option");
+      opt.value = t.id;
+      const isCurrent = t.id === activeTabId;
+      opt.textContent = isCurrent ? `${t.name} (Active Tab)` : t.name;
+      el.splitDocSelect.appendChild(opt);
+    }
+  }
+
+  const openOpt = document.createElement("option");
+  openOpt.value = "__open_new__";
+  openOpt.textContent = "+ Open another PDF…";
+  el.splitDocSelect.appendChild(openOpt);
+
+  if (splitTabId && pdfTabs.some((t) => t.id === splitTabId)) {
+    el.splitDocSelect.value = splitTabId;
+  } else if (pdfTabs.length > 0) {
+    const other = pdfTabs.find((t) => t.id !== activeTabId);
+    el.splitDocSelect.value = other ? other.id : pdfTabs[0].id;
+  }
+}
+
+export async function onSplitDocSelectChange() {
+  if (!el.splitDocSelect) return;
+  const val = el.splitDocSelect.value;
+  if (val === "__open_new__") {
+    await openSplitFile();
+    return;
+  }
+  const targetTab = tabs.find((t) => t.id === val);
+  if (targetTab) {
+    await openSplitView(targetTab);
+  }
+}
+
+export async function openSplitFile() {
+  const res = await window.pdfViewer.openDialog();
+  if (!res || res.canceled || !res.data) {
+    updateSplitDocSelect();
+    return;
+  }
+  setTabCounter(tabCounter + 1);
+  const rawBytes = res.data ? (res.data instanceof Uint8Array ? res.data : new Uint8Array(res.data)).slice() : null;
+  const newTab = {
+    id: "tab-" + tabCounter,
+    type: "pdf",
+    name: res.name,
+    filePath: res.path,
+    data: rawBytes,
+    doc: null,
+    pages: [],
+    outline: [],
+    currentPage: 1,
+    zoom: 1,
+    layoutMode: "fit-width",
+    twoPageMode: false,
+    rotation: 0,
+    sidebarVisible: Boolean(thumbsVisible),
+    activeSidebarTab: "thumbs",
+  };
+  tabs.push(newTab);
+  renderTabBar();
+  await openSplitView(newTab);
+}
+
 export async function toggleSplitView() {
   if (isSplitActive) {
     closeSplitView();
@@ -434,40 +596,27 @@ export async function toggleSplitView() {
   }
   const otherTab = tabs.find((t) => t.id !== activeTabId && (t.data || t.doc));
   if (otherTab && otherTab.data) {
-    openSplitView(otherTab);
+    await openSplitView(otherTab);
   } else {
-    const res = await window.pdfViewer.openDialog();
-    if (res && !res.canceled && res.data) {
-      const newTab = {
-        id: "tab-" + (++tabCounter),
-        type: "pdf",
-        name: res.name,
-        filePath: res.path,
-        data: res.data,
-        doc: null,
-        pages: [],
-        outline: [],
-        currentPage: 1,
-        zoom: 1,
-        layoutMode: "fit-width",
-        twoPageMode: false,
-        rotation: 0,
-      };
-      tabs.push(newTab);
-      renderTabBar();
-      openSplitView(newTab);
+    const currentTab = tabs.find((t) => t.id === activeTabId && (t.data || t.doc));
+    if (currentTab && currentTab.data) {
+      await openSplitView(currentTab);
+    } else {
+      await openSplitFile();
     }
   }
 }
 
 export async function openSplitView(tab) {
+  if (!tab) return;
   setIsSplitActive(true);
   setSplitTabId(tab.id);
   if (el.splitDivider) el.splitDivider.hidden = false;
   if (el.secondaryPane) el.secondaryPane.hidden = false;
   if (el.btnSplitView) el.btnSplitView.classList.add("active");
   if (el.secondaryPaneTitle) el.secondaryPaneTitle.textContent = tab.name || "Second Document";
-  renderSplitDoc(tab);
+  updateSplitDocSelect();
+  await renderSplitDoc(tab);
 }
 
 export function closeSplitView() {
@@ -477,6 +626,7 @@ export function closeSplitView() {
   if (el.secondaryPane) el.secondaryPane.hidden = true;
   if (el.btnSplitView) el.btnSplitView.classList.remove("active");
   if (el.secondaryPageHost) el.secondaryPageHost.textContent = "";
+  if (el.splitPageIndicator) el.splitPageIndicator.textContent = "";
   if (splitDoc) {
     try {
       splitDoc.destroy();
@@ -492,14 +642,40 @@ export function closeSplitView() {
 export async function renderSplitDoc(tab) {
   if (!el.secondaryPageHost) return;
   el.secondaryPageHost.textContent = "";
-  if (!tab.data) return;
-  try {
-    const task = getDocument({ data: tab.data });
-    setSplitDoc(await task.promise);
+  if (!tab || (!tab.data && !tab.doc)) {
+    if (el.splitPageIndicator) el.splitPageIndicator.textContent = "";
+    return;
+  }
+  if (splitDoc) {
+    try {
+      await splitDoc.destroy();
+    } catch {}
+    setSplitDoc(null);
     setSplitPages([]);
+  }
+  try {
+    let rawBytes = tab.data;
+    if (!rawBytes && tab.doc && typeof tab.doc.getData === "function") {
+      try {
+        rawBytes = await tab.doc.getData();
+        tab.data = rawBytes.slice();
+      } catch {}
+    }
+    if (!rawBytes) {
+      if (el.splitPageIndicator) el.splitPageIndicator.textContent = "";
+      return;
+    }
+    const bytesToPass = (rawBytes instanceof Uint8Array ? rawBytes : new Uint8Array(rawBytes)).slice();
+    const task = getDocument({ data: bytesToPass });
+    const doc = await task.promise;
+    setSplitDoc(doc);
+    setSplitPages([]);
+    if (el.splitPageIndicator) {
+      el.splitPageIndicator.textContent = `${doc.numPages} ${doc.numPages === 1 ? "page" : "pages"}`;
+    }
     const availW = Math.max(260, (el.secondaryPageHost.clientWidth || 400) - 48);
-    for (let i = 1; i <= splitDoc.numPages; i++) {
-      const page = await splitDoc.getPage(i);
+    for (let i = 1; i <= doc.numPages; i++) {
+      const page = await doc.getPage(i);
       const vp1 = page.getViewport({ scale: 1 });
       const scale = availW / vp1.width;
       const vp = page.getViewport({ scale });
@@ -549,4 +725,3 @@ export function setupSplitDivider() {
     }
   });
 }
-

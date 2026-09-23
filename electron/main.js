@@ -465,6 +465,64 @@ async function runSmoke() {
     console.log("[smoke] file-assoc modal closed ok:", Boolean(closedOk));
     if (!closedOk) throw new Error("File association modal did not close");
 
+    // Multi-Tab & Split View Smoke Verification
+    console.log("[smoke] Verifying multi-tab switching and thumbnail preservation...");
+    // Currently on Tab 1 (PDF)
+    // Switch to Tab 2 (the editor tab created earlier)
+    await mainWindow.webContents.executeJavaScript("document.querySelectorAll('.chrome-tab')[1].click(); true;");
+    const tab2EditorOk = await poll(
+      () => mainWindow.webContents.executeJavaScript("!document.getElementById('editor-view').hidden"),
+      4000
+    );
+    console.log("[smoke] tab 2 is active editor:", Boolean(tab2EditorOk));
+    if (!tab2EditorOk) throw new Error("Tab 2 is not in editor mode");
+
+    // Switch back to Tab 1 (PDF tab)
+    await mainWindow.webContents.executeJavaScript("document.querySelectorAll('.chrome-tab')[0].click(); true;");
+    const tab1PdfOk = await poll(
+      () =>
+        mainWindow.webContents.executeJavaScript(
+          "document.getElementById('editor-view').hidden && " +
+            "!document.getElementById('doc-name').textContent.includes('Document1') && " +
+            "document.querySelectorAll('.thumb').length >= 1"
+        ),
+      4000
+    );
+    console.log("[smoke] tab 1 preserved as PDF with thumbnails:", Boolean(tab1PdfOk));
+    if (!tab1PdfOk) throw new Error("Tab 1 mutated to editor or lost thumbnails on return!");
+
+    // Test Split View enhancements
+    console.log("[smoke] Verifying enhanced Split View...");
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-split-view').click(); true;");
+    const splitOpened = await poll(
+      () => mainWindow.webContents.executeJavaScript("!document.getElementById('secondary-pane').hidden"),
+      4000
+    );
+    console.log("[smoke] split view opened:", Boolean(splitOpened));
+    if (!splitOpened) throw new Error("Split view did not open");
+
+    const splitSelectCount = await mainWindow.webContents.executeJavaScript(
+      "document.querySelectorAll('#split-doc-select option').length"
+    );
+    console.log("[smoke] split-doc-select options count:", splitSelectCount);
+    if (splitSelectCount < 2) throw new Error("split-doc-select did not populate with options");
+
+    const splitCanvasOk = await poll(
+      () => mainWindow.webContents.executeJavaScript("document.querySelectorAll('#secondary-page-host canvas').length >= 1"),
+      8000
+    );
+    console.log("[smoke] split view canvas rendered:", Boolean(splitCanvasOk));
+    if (!splitCanvasOk) throw new Error("Split view document did not render");
+
+    // Close split view
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-close-split').click(); true;");
+    const splitClosed = await poll(
+      () => mainWindow.webContents.executeJavaScript("document.getElementById('secondary-pane').hidden"),
+      3000
+    );
+    console.log("[smoke] split view closed ok:", Boolean(splitClosed));
+    if (!splitClosed) throw new Error("Split view close button did not close pane");
+
     console.log("[smoke] PASS");
     app.exit(0);
   } catch (err) {
