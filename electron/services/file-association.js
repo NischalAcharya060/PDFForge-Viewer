@@ -57,36 +57,78 @@ async function checkDefaultStatus() {
     return { isDefault: false, progId: "", osSupported: false };
   }
 
-  // 1. Try querying UserChoice
+  // 1. Windows 11 24H2 / latest Insider UserChoiceLatest (takes highest precedence)
+  const userChoiceLatestSub = await runRegCommand([
+    "query",
+    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.pdf\\UserChoiceLatest\\ProgId",
+    "/v",
+    "ProgId",
+  ]);
+  if (!userChoiceLatestSub.error && userChoiceLatestSub.stdout) {
+    const match = userChoiceLatestSub.stdout.match(/ProgId\s+REG_SZ\s+(\S.*)/i);
+    if (match && match[1]) {
+      const progId = match[1].trim();
+      return { isDefault: /pdfforge/i.test(progId), progId, osSupported: true };
+    }
+  }
+
+  const userChoiceLatest = await runRegCommand([
+    "query",
+    "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.pdf\\UserChoiceLatest",
+    "/v",
+    "ProgId",
+  ]);
+  if (!userChoiceLatest.error && userChoiceLatest.stdout) {
+    const match = userChoiceLatest.stdout.match(/ProgId\s+REG_SZ\s+(\S.*)/i);
+    if (match && match[1]) {
+      const progId = match[1].trim();
+      return { isDefault: /pdfforge/i.test(progId), progId, osSupported: true };
+    }
+  }
+
+  // 2. Standard Windows 10 / earlier Windows 11 UserChoice
   const userChoiceResult = await runRegCommand([
     "query",
     "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\FileExts\\.pdf\\UserChoice",
     "/v",
     "ProgId",
   ]);
-
+  let userChoiceProgId = null;
   if (!userChoiceResult.error && userChoiceResult.stdout) {
     const match = userChoiceResult.stdout.match(/ProgId\s+REG_SZ\s+(\S.*)/i);
     if (match && match[1]) {
-      const progId = match[1].trim();
-      const isDefault = /pdfforge/i.test(progId);
-      return { isDefault, progId, osSupported: true };
+      userChoiceProgId = match[1].trim();
+      if (/pdfforge/i.test(userChoiceProgId)) {
+        return { isDefault: true, progId: userChoiceProgId, osSupported: true };
+      }
     }
   }
 
-  // 2. Fallback to HKCU\Software\Classes\.pdf default
+  // 3. HKCU\Software\Classes\.pdf default
   const defaultExtResult = await runRegCommand(["query", "HKCU\\Software\\Classes\\.pdf", "/ve"]);
-
   if (!defaultExtResult.error && defaultExtResult.stdout) {
     const match = defaultExtResult.stdout.match(/\(Default\)\s+REG_SZ\s+(\S.*)/i);
     if (match && match[1]) {
       const progId = match[1].trim();
-      const isDefault = /pdfforge/i.test(progId);
-      return { isDefault, progId, osSupported: true };
+      if (/pdfforge/i.test(progId)) {
+        return { isDefault: true, progId, osSupported: true };
+      }
     }
   }
 
-  return { isDefault: false, progId: "", osSupported: true };
+  // 4. HKCR\.pdf default
+  const hkcrResult = await runRegCommand(["query", "HKCR\\.pdf", "/ve"]);
+  if (!hkcrResult.error && hkcrResult.stdout) {
+    const match = hkcrResult.stdout.match(/\(Default\)\s+REG_SZ\s+(\S.*)/i);
+    if (match && match[1]) {
+      const progId = match[1].trim();
+      if (/pdfforge/i.test(progId)) {
+        return { isDefault: true, progId, osSupported: true };
+      }
+    }
+  }
+
+  return { isDefault: false, progId: userChoiceProgId || "", osSupported: true };
 }
 
 /**

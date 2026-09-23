@@ -41,9 +41,16 @@ export async function showAboutModal() {
   const archString = info.arch === "x64" ? "64-bit" : info.arch === "arm64" ? "ARM 64-bit" : info.arch || "";
   const osString = `${platformName} ${archString}`.trim();
 
+  let isDef = false;
+  try {
+    const assoc = await window.pdfViewer?.getFileAssocStatus?.();
+    isDef = Boolean(assoc?.isDefault);
+  } catch {}
+
   const rows = [
     ["Product", `PDFForge Viewer`],
     ["Version", `${appVersion} <span class="about-pill green">Latest Release</span>`],
+    ["Default PDF Reader", isDef ? `<span class="about-pill green">Default System Reader</span>` : `<span class="about-pill">Not Default</span>`],
     ["Edition", `Desktop Standard Edition`],
     ["Platform", osString],
     ["Privacy", `<span class="about-pill green">100% Offline · Zero Telemetry</span>`],

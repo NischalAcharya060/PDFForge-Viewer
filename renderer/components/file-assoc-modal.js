@@ -29,44 +29,44 @@ export async function getFileAssocPrefs() {
 }
 
 export async function updateDefaultAppStatus() {
-  if (!el.defaultAppBadge || !el.defaultAppDesc) return;
   if (isCheckingStatus) return;
   isCheckingStatus = true;
 
   try {
     if (window.pdfViewer?.getFileAssocStatus) {
       const status = await window.pdfViewer.getFileAssocStatus();
-      if (status.isDefault) {
-        el.defaultAppBadge.className = "status-pill success";
-        el.defaultAppBadge.innerHTML = `
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
-            <polyline points="20 6 9 17 4 12"/>
-          </svg>
-          Default PDF Viewer
-        `;
-        el.defaultAppDesc.textContent = "PDFForge Viewer is currently your default reader for .pdf files.";
-        if (el.btnSetDefault) {
-          el.btnSetDefault.textContent = "Default App Active";
-          el.btnSetDefault.disabled = true;
-        }
-      } else {
-        el.defaultAppBadge.className = "status-pill warning";
-        el.defaultAppBadge.innerHTML = `
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
-            <circle cx="12" cy="12" r="10"/>
-            <line x1="12" y1="8" x2="12" y2="12"/>
-            <line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-          Not Default Reader
-        `;
-        el.defaultAppDesc.textContent = status.progId
-          ? `Currently opened by '${status.progId}'. Click below to set PDFForge Viewer as default.`
-          : "PDF files are not currently associated with PDFForge Viewer.";
-        if (el.btnSetDefault) {
-          el.btnSetDefault.textContent = "Set as Default PDF Viewer";
-          el.btnSetDefault.disabled = false;
-        }
+      const isDef = Boolean(status?.isDefault);
+
+      // Update modal badge & description
+      if (el.defaultAppBadge) {
+        el.defaultAppBadge.className = isDef ? "status-pill success" : "status-pill warning";
+        el.defaultAppBadge.innerHTML = isDef
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Default PDF Viewer`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Not Default Reader`;
       }
+
+      if (el.defaultAppDesc) {
+        el.defaultAppDesc.textContent = isDef
+          ? "PDFForge Viewer is currently your default reader for .pdf files."
+          : (status?.progId
+              ? `Currently opened by '${status.progId}'. Click below to set PDFForge Viewer as default.`
+              : "PDF files are not currently associated with PDFForge Viewer.");
+      }
+
+      if (el.btnSetDefault) {
+        el.btnSetDefault.textContent = isDef ? "Default App Active" : "Set as Default PDF Viewer";
+        el.btnSetDefault.disabled = isDef;
+      }
+
+      return status;
     }
   } catch (err) {
     console.warn("Could not check default app status:", err);
@@ -293,9 +293,6 @@ export async function handleApplyFileIcon() {
 }
 
 export function initFileAssocModal() {
-  if (el.btnFileAssoc) {
-    el.btnFileAssoc.addEventListener("click", showFileAssocModal);
-  }
   if (el.btnFileAssocClose) {
     el.btnFileAssocClose.addEventListener("click", hideFileAssocModal);
   }
@@ -326,10 +323,11 @@ export function initFileAssocModal() {
     });
   }
 
-  // Re-check status when window is focused
+  // Re-check status on window focus
   window.addEventListener("focus", () => {
-    if (el.fileAssocModal && !el.fileAssocModal.hidden) {
-      updateDefaultAppStatus();
-    }
+    updateDefaultAppStatus();
   });
+
+  // Initial check on load
+  updateDefaultAppStatus();
 }

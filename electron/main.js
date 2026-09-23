@@ -167,8 +167,6 @@ function buildMenu() {
         { label: "Print…", accelerator: "CmdOrCtrl+P", click: () => send("print") },
         { label: "Document Properties…", accelerator: "CmdOrCtrl+D", click: () => send("properties") },
         { type: "separator" },
-        { label: "Default App & File Icon…", accelerator: "CmdOrCtrl+,", click: () => send("file-assoc") },
-        { type: "separator" },
         isMac ? { role: "close" } : { role: "quit" },
       ],
     },
@@ -212,13 +210,18 @@ function buildMenu() {
           accelerator: "CmdOrCtrl+F",
           click: () => send("find"),
         },
+        { type: "separator" },
+        {
+          label: "Preferences…",
+          accelerator: "CmdOrCtrl+,",
+          click: () => send("preferences"),
+        },
       ],
     },
     {
       label: "Help",
       submenu: [
         { label: "Keyboard Shortcuts", accelerator: "F1", click: () => send("shortcuts") },
-        { label: "Default App & File Icon…", click: () => send("file-assoc") },
         { type: "separator" },
         { label: "About PDFForge Viewer", click: () => send("about") },
       ],
@@ -364,7 +367,7 @@ async function runSmoke() {
       throw new Error("app:get-info failed or returned invalid version info");
     }
 
-    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-about').click();");
+    mainWindow.webContents.send("menu:command", "about");
     const aboutOk = await poll(
       () =>
         mainWindow.webContents.executeJavaScript(
@@ -417,7 +420,7 @@ async function runSmoke() {
       throw new Error("Preset icons missing or invalid");
     }
 
-    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-file-assoc').click();");
+    mainWindow.webContents.send("menu:command", "preferences");
     const fileAssocModalOk = await poll(
       () =>
         mainWindow.webContents.executeJavaScript(
@@ -431,6 +434,14 @@ async function runSmoke() {
     );
     console.log("[smoke] file-assoc modal opened:", Boolean(fileAssocModalOk));
     if (!fileAssocModalOk) throw new Error("File association modal did not open or populate");
+
+    const badgeText = await mainWindow.webContents.executeJavaScript(
+      "document.getElementById('default-app-badge').textContent"
+    );
+    console.log("[smoke] default app badge text:", badgeText.trim());
+    if (!badgeText.includes("Default PDF Viewer")) {
+      throw new Error("Expected default-app-badge to show Default PDF Viewer, got: " + badgeText);
+    }
 
     await mainWindow.webContents.executeJavaScript("document.querySelector('[data-icon-id=\"classic\"]').click();");
     const cardSelectedOk = await mainWindow.webContents.executeJavaScript(

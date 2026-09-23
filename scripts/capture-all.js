@@ -120,7 +120,7 @@ app.whenReady().then(async () => {
   console.log("Saved current-home.png");
 
   // Open About Modal
-  await win.webContents.executeJavaScript("document.getElementById('btn-about').click()");
+  win.webContents.send("menu:command", "about");
   await new Promise((r) => setTimeout(r, 600));
   img = await win.capturePage();
   await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-about.png"), img.toPNG());

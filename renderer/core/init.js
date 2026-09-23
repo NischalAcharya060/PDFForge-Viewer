@@ -129,7 +129,6 @@ function bindEvents() {
 
   if (el.btnNew) el.btnNew.addEventListener("click", newTextFile);
   el.btnOpen.addEventListener("click", openFromDialog);
-  if (el.btnSave) el.btnSave.addEventListener("click", savePdf);
   el.btnOpenEmpty.addEventListener("click", openFromDialog);
   if (el.btnNewEmpty) el.btnNewEmpty.addEventListener("click", newTextFile);
   el.btnErrorOpen.addEventListener("click", openFromDialog);
@@ -139,23 +138,11 @@ function bindEvents() {
   if (el.btnFind) el.btnFind.addEventListener("click", () => toggleFindBar());
   if (el.btnInfo) el.btnInfo.addEventListener("click", showPropertiesModal);
   if (el.btnShortcuts) el.btnShortcuts.addEventListener("click", showShortcutsModal);
-  if (el.btnAbout) el.btnAbout.addEventListener("click", showAboutModal);
-  if (el.appBrandBtn) {
-    el.appBrandBtn.addEventListener("click", showAboutModal);
-    el.appBrandBtn.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        e.preventDefault();
-        showAboutModal();
-      }
-    });
-  }
-  if (el.btnEmptyAbout) el.btnEmptyAbout.addEventListener("click", showAboutModal);
   if (el.btnPropertiesClose) el.btnPropertiesClose.addEventListener("click", hideAllOverlays);
   if (el.btnPropertiesCopy) el.btnPropertiesCopy.addEventListener("click", copyPropertiesInfo);
   if (el.btnShortcutsClose) el.btnShortcutsClose.addEventListener("click", hideAllOverlays);
   if (el.btnAboutClose) el.btnAboutClose.addEventListener("click", hideAllOverlays);
   if (el.btnAboutCopy) el.btnAboutCopy.addEventListener("click", copyAboutInfo);
-  if (el.btnAboutFileAssoc) el.btnAboutFileAssoc.addEventListener("click", showFileAssocModal);
 
   initFileAssocModal();
 
@@ -230,7 +217,7 @@ function bindEvents() {
     });
   }
 
-  [el.propertiesModal, el.shortcutsModal, el.passwordModal, el.aboutModal, el.printPreviewModal].forEach((overlay) => {
+  [el.propertiesModal, el.shortcutsModal, el.passwordModal, el.aboutModal, el.printPreviewModal, el.fileAssocModal].forEach((overlay) => {
     if (overlay) {
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay) {
@@ -707,6 +694,8 @@ function bindEvents() {
       case "about":
         showAboutModal();
         break;
+      case "preferences":
+      case "settings":
       case "file-assoc":
         showFileAssocModal();
         break;

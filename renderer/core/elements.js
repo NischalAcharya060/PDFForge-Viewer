@@ -20,7 +20,6 @@ export const el = {
   secondaryPageHost: document.getElementById("secondary-page-host"),
   btnNew: document.getElementById("btn-new"),
   btnOpen: document.getElementById("btn-open"),
-  btnSave: document.getElementById("btn-save"),
   btnPrint: document.getElementById("btn-print"),
   btnFind: document.getElementById("btn-find"),
   btnInfo: document.getElementById("btn-info"),
@@ -72,12 +71,9 @@ export const el = {
   aboutModal: document.getElementById("about-modal"),
   aboutVersionBadge: document.getElementById("about-version-badge"),
   aboutInfoGrid: document.getElementById("about-info-grid"),
-  btnAbout: document.getElementById("btn-about"),
   btnAboutClose: document.getElementById("btn-about-close"),
   btnAboutCopy: document.getElementById("btn-about-copy"),
-  btnEmptyAbout: document.getElementById("btn-empty-about"),
   emptyVersionLabel: document.getElementById("empty-version-label"),
-  appBrandBtn: document.getElementById("app-brand-btn"),
   printHost: document.getElementById("print-host"),
   printPreviewModal: document.getElementById("print-preview-modal"),
   btnPrintPreviewClose: document.getElementById("btn-print-preview-close"),
@@ -168,8 +164,7 @@ export const el = {
   unsavedBtnCancel: document.getElementById("unsaved-btn-cancel"),
   unsavedBtnDiscard: document.getElementById("unsaved-btn-discard"),
   unsavedBtnSave: document.getElementById("unsaved-btn-save"),
-  // File Association & Icon Customizer Modal
-  btnFileAssoc: document.getElementById("btn-file-assoc"),
+  // Preferences (File Association & Icon Customizer) Modal
   fileAssocModal: document.getElementById("file-assoc-modal"),
   btnFileAssocClose: document.getElementById("btn-file-assoc-close"),
   btnFileAssocCancel: document.getElementById("btn-file-assoc-cancel"),
@@ -183,7 +178,6 @@ export const el = {
   btnBrowseCustomIcon: document.getElementById("btn-browse-custom-icon"),
   customIconPathLabel: document.getElementById("custom-icon-path-label"),
   explorerPreviewIcon: document.getElementById("explorer-preview-icon"),
-  btnAboutFileAssoc: document.getElementById("btn-about-file-assoc"),
 };
 
 for (const preset of ZOOM_PRESETS) {

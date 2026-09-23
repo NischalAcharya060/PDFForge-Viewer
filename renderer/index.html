@@ -43,7 +43,7 @@
 
     <header id="toolbar">
       <div class="toolbar-group left">
-        <div class="app-brand" id="app-brand-btn" role="button" tabindex="0" title="About PDFForge Desktop Viewer">
+        <div class="app-brand" title="PDFForge Viewer">
           <svg viewBox="0 0 24 24" fill="none" class="brand-icon">
             <rect width="24" height="24" rx="6" fill="#e5484d" />
             <path d="M7 6h6l4 4v8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="#fff" opacity="0.95" />
@@ -63,13 +63,6 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             <path d="M3 9h18" />
-          </svg>
-        </button>
-        <button id="btn-save" class="icon-btn" title="Save PDF (Ctrl+S)" disabled>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-            <polyline points="17 21 17 13 7 13 7 21" />
-            <polyline points="7 3 7 8 15 8" />
           </svg>
         </button>
         <button id="btn-print" class="icon-btn" title="Print (Ctrl+P)" disabled>
@@ -173,21 +166,6 @@
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </button>
-        <button id="btn-file-assoc" class="icon-btn" title="Default App & PDF File Icon (Ctrl+,)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <polyline points="14 2 14 8 20 8" />
-            <circle cx="12" cy="15" r="2.5" />
-            <path d="M12 11.5v1M12 16.5v1M9.5 14h1M13.5 14h1" />
-          </svg>
-        </button>
-        <button id="btn-about" class="icon-btn" title="About PDFForge Viewer">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
-          </svg>
-        </button>
         <button id="btn-theme" class="icon-btn" title="Toggle dark mode (D)">
           <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
             <circle cx="12" cy="12" r="4" />
@@ -275,12 +253,6 @@
           <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>P</kbd> Print</span>
           <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>R</kbd> Rotate</span>
           <span class="shortcut-chip"><kbd>?</kbd> Help</span>
-        </div>
-
-        <div class="empty-footer-info">
-          <button id="btn-empty-about" class="empty-info-link" type="button" title="View app version and details">
-            PDFForge Viewer <span id="empty-version-label">v1.1.0</span> • About &amp; App Details
-          </button>
         </div>
       </div>
     </div>
@@ -639,6 +611,7 @@
           <div class="shortcut-row"><span class="shortcut-desc">Toggle Sidebar</span><span><kbd>T</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Toggle Dark Mode</span><span><kbd>D</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Document Properties</span><span><kbd>Ctrl</kbd> + <kbd>D</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Preferences</span><span><kbd>Ctrl</kbd> + <kbd>,</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">About PDFForge Viewer</span><span><kbd>Help Menu</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Show Shortcuts</span><span><kbd>?</kbd> or <kbd>F1</kbd></span></div>
         </div>
@@ -681,22 +654,13 @@
         </div>
 
         <div class="modal-actions" style="justify-content: space-between;">
-          <div style="display: flex; gap: 8px;">
-            <button id="btn-about-copy" class="plain-btn" type="button" title="Copy application details to clipboard">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-              <span>Copy App Details</span>
-            </button>
-            <button id="btn-about-file-assoc" class="plain-btn" type="button" title="Configure Default App and File Icon">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                <polyline points="14 2 14 8 20 8"></polyline>
-              </svg>
-              <span>File Association &amp; Icon</span>
-            </button>
-          </div>
+          <button id="btn-about-copy" class="plain-btn" type="button" title="Copy application details to clipboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copy App Details</span>
+          </button>
           <button id="btn-about-close" class="primary-btn">Close</button>
         </div>
       </div>
@@ -707,12 +671,10 @@
       <div class="modal modal-wide file-assoc-dialog">
         <div class="modal-head">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-            <polyline points="14 2 14 8 20 8"/>
-            <circle cx="12" cy="15" r="2.5"/>
-            <path d="M12 11.5v1M12 16.5v1M9.5 14h1M13.5 14h1"/>
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
-          <span>Default PDF Reader &amp; File Icon</span>
+          <span>Preferences</span>
           <button id="btn-file-assoc-close" class="chrome-tab-close" type="button" title="Close (Esc)" style="margin-left: auto;">&times;</button>
         </div>
 
