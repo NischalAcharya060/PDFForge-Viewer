@@ -19,6 +19,7 @@ import { showPropertiesModal, copyPropertiesInfo } from '../components/propertie
 import { showShortcutsModal } from '../components/shortcuts-modal.js';
 import { showPasswordModal, hidePasswordModal, submitPassword } from '../components/password-modal.js';
 import { hasAnyUnsavedWork, showUnsavedWarningModal, hideUnsavedWarningModal, setupBeforeUnload } from '../components/unsaved-warning.js';
+import { initFileAssocModal, showFileAssocModal } from '../components/file-assoc-modal.js';
 
 // Services
 import { openDocument, destroyDocument, openFromDialog, hideAllOverlays, showEmpty, showError } from '../services/document-service.js';
@@ -154,6 +155,9 @@ function bindEvents() {
   if (el.btnShortcutsClose) el.btnShortcutsClose.addEventListener("click", hideAllOverlays);
   if (el.btnAboutClose) el.btnAboutClose.addEventListener("click", hideAllOverlays);
   if (el.btnAboutCopy) el.btnAboutCopy.addEventListener("click", copyAboutInfo);
+  if (el.btnAboutFileAssoc) el.btnAboutFileAssoc.addEventListener("click", showFileAssocModal);
+
+  initFileAssocModal();
 
   if (el.btnPrintPreviewClose) el.btnPrintPreviewClose.addEventListener("click", hideAllOverlays);
   if (el.btnPrintCancel) el.btnPrintCancel.addEventListener("click", hideAllOverlays);
@@ -588,11 +592,16 @@ function bindEvents() {
         toggleFindBar(false);
         return;
       }
-      if (!el.propertiesModal.hidden || !el.shortcutsModal.hidden || !el.passwordModal.hidden || (el.aboutModal && !el.aboutModal.hidden)) {
+      if (!el.propertiesModal.hidden || !el.shortcutsModal.hidden || !el.passwordModal.hidden || (el.aboutModal && !el.aboutModal.hidden) || (el.fileAssocModal && !el.fileAssocModal.hidden)) {
         e.preventDefault();
         hideAllOverlays();
         return;
       }
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === ",") {
+      e.preventDefault();
+      showFileAssocModal();
+      return;
     }
     if (key === "?" || key === "F1") {
       const tag = e.target && e.target.tagName;
@@ -697,6 +706,9 @@ function bindEvents() {
         break;
       case "about":
         showAboutModal();
+        break;
+      case "file-assoc":
+        showFileAssocModal();
         break;
       case "print":
         printDocument();

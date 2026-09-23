@@ -84,6 +84,7 @@ export function hideAllOverlays() {
   if (el.shortcutsModal) el.shortcutsModal.hidden = true;
   if (el.aboutModal) el.aboutModal.hidden = true;
   if (el.printPreviewModal) el.printPreviewModal.hidden = true;
+  if (el.fileAssocModal) el.fileAssocModal.hidden = true;
 }
 
 function showPasswordModal(note) {

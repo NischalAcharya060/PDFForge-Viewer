@@ -168,6 +168,22 @@ export const el = {
   unsavedBtnCancel: document.getElementById("unsaved-btn-cancel"),
   unsavedBtnDiscard: document.getElementById("unsaved-btn-discard"),
   unsavedBtnSave: document.getElementById("unsaved-btn-save"),
+  // File Association & Icon Customizer Modal
+  btnFileAssoc: document.getElementById("btn-file-assoc"),
+  fileAssocModal: document.getElementById("file-assoc-modal"),
+  btnFileAssocClose: document.getElementById("btn-file-assoc-close"),
+  btnFileAssocCancel: document.getElementById("btn-file-assoc-cancel"),
+  btnApplyIcon: document.getElementById("btn-apply-icon"),
+  defaultAppBadge: document.getElementById("default-app-badge"),
+  defaultAppDesc: document.getElementById("default-app-desc"),
+  btnSetDefault: document.getElementById("btn-set-default"),
+  btnOpenDefaultSettings: document.getElementById("btn-open-default-settings"),
+  iconPickerGrid: document.getElementById("icon-picker-grid"),
+  customIconPickerRow: document.getElementById("custom-icon-picker-row"),
+  btnBrowseCustomIcon: document.getElementById("btn-browse-custom-icon"),
+  customIconPathLabel: document.getElementById("custom-icon-path-label"),
+  explorerPreviewIcon: document.getElementById("explorer-preview-icon"),
+  btnAboutFileAssoc: document.getElementById("btn-about-file-assoc"),
 };
 
 for (const preset of ZOOM_PRESETS) {

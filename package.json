@@ -12,7 +12,7 @@
     "build": "electron-builder",
     "build:dir": "electron-builder --dir",
     "dist": "electron-builder --win nsis",
-    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/services/rich-to-pdf.js && node --check electron/services/text-to-pdf.js && node --check electron/utils/pdf-helpers.js",
+    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/services/file-association.js && node --check electron/services/rich-to-pdf.js && node --check electron/services/text-to-pdf.js && node --check electron/utils/pdf-helpers.js",
     "test": "npm run lint && npm run test:rich",
     "test:rich": "node scripts/rich-smoke.js"
   },
@@ -36,6 +36,8 @@
     "files": [
       "electron/**/*",
       "renderer/**/*",
+      "assets/**/*",
+      "scripts/notify-shell.ps1",
       "node_modules/pdfjs-dist/build/**/*",
       "node_modules/pdfjs-dist/web/**/*",
       "node_modules/pdf-lib/**/*",

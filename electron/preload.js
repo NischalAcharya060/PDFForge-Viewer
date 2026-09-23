@@ -30,4 +30,11 @@ contextBridge.exposeInMainWorld("pdfViewer", {
   // Close confirmation flow
   onCloseRequested: subscribe("app:close-requested"),
   confirmClose: (action) => ipcRenderer.invoke("app:confirm-close", action),
+  // File Association & Icon Customization
+  getFileAssocStatus: () => ipcRenderer.invoke("fileAssoc:getStatus"),
+  setAsDefaultPdfViewer: () => ipcRenderer.invoke("fileAssoc:setDefault"),
+  openDefaultAppsSettings: () => ipcRenderer.invoke("fileAssoc:openSettings"),
+  getIconPreferences: () => ipcRenderer.invoke("fileAssoc:getIconPrefs"),
+  applyPdfFileIcon: (payload) => ipcRenderer.invoke("fileAssoc:applyIcon", payload),
+  chooseCustomIcon: () => ipcRenderer.invoke("fileAssoc:chooseCustomIcon"),
 });

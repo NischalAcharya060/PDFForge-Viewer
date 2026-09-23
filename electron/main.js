@@ -6,6 +6,7 @@ const { textToPdf } = require("./services/text-to-pdf");
 const { richToPdf } = require("./services/rich-to-pdf");
 const { looksLikePdf, firstPdfArg, makeTestPdf } = require('./utils/pdf-helpers');
 const { PDFDocument } = require("pdf-lib");
+const fileAssoc = require("./services/file-association");
 
 const SMOKE = process.argv.includes("--smoke") || process.env.PDFVIEWER_SMOKE === "1";
 
@@ -26,6 +27,7 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 const RENDERER_DIR = path.join(__dirname, "..", "renderer");
+const ASSETS_DIR = path.join(__dirname, "..", "assets");
 const PDFJS_BUILD_DIR = path.join(__dirname, "..", "node_modules", "pdfjs-dist", "build");
 const PDFJS_WEB_DIR = path.join(__dirname, "..", "node_modules", "pdfjs-dist", "web");
 const QUILL_DIR = path.join(__dirname, "..", "node_modules", "quill", "dist");
@@ -48,6 +50,10 @@ function registerProtocol() {
       filePath = path.join(PDFJS_WEB_DIR, pathname.substring("/pdfjs-web/".length));
     } else if (pathname.startsWith("/quill/")) {
       filePath = path.join(QUILL_DIR, path.basename(pathname));
+    } else if (pathname.startsWith("/assets/")) {
+      filePath = path.join(ASSETS_DIR, pathname.substring("/assets/".length));
+    } else if (pathname.startsWith("/file-icons/")) {
+      filePath = path.join(ASSETS_DIR, "file-icons", pathname.substring("/file-icons/".length));
     } else {
       filePath = path.join(RENDERER_DIR, pathname.replace(/^\//, ""));
     }
@@ -60,6 +66,7 @@ function registerProtocol() {
     const allowed =
       filePath === RENDERER_DIR ||
       filePath.startsWith(RENDERER_DIR + path.sep) ||
+      filePath.startsWith(ASSETS_DIR + path.sep) ||
       (filePath.startsWith(PDFJS_BUILD_DIR + path.sep) && pathname.startsWith("/pdfjs/")) ||
       (filePath.startsWith(PDFJS_WEB_DIR + path.sep) && pathname.startsWith("/pdfjs-web/")) ||
       (filePath.startsWith(QUILL_DIR + path.sep) && pathname.startsWith("/quill/"));
@@ -160,6 +167,8 @@ function buildMenu() {
         { label: "Print…", accelerator: "CmdOrCtrl+P", click: () => send("print") },
         { label: "Document Properties…", accelerator: "CmdOrCtrl+D", click: () => send("properties") },
         { type: "separator" },
+        { label: "Default App & File Icon…", accelerator: "CmdOrCtrl+,", click: () => send("file-assoc") },
+        { type: "separator" },
         isMac ? { role: "close" } : { role: "quit" },
       ],
     },
@@ -209,6 +218,7 @@ function buildMenu() {
       label: "Help",
       submenu: [
         { label: "Keyboard Shortcuts", accelerator: "F1", click: () => send("shortcuts") },
+        { label: "Default App & File Icon…", click: () => send("file-assoc") },
         { type: "separator" },
         { label: "About PDFForge Viewer", click: () => send("about") },
       ],
@@ -396,6 +406,54 @@ async function runSmoke() {
 
     await mainWindow.webContents.executeJavaScript("document.getElementById('btn-print-preview-close').click();");
 
+    // File Association & Icon Customizer Smoke Verification
+    const assocStatus = await mainWindow.webContents.executeJavaScript("window.pdfViewer.getFileAssocStatus()");
+    console.log("[smoke] fileAssoc status:", JSON.stringify(assocStatus));
+    if (typeof assocStatus !== "object") throw new Error("getFileAssocStatus failed");
+
+    const iconPrefs = await mainWindow.webContents.executeJavaScript("window.pdfViewer.getIconPreferences()");
+    console.log("[smoke] iconPrefs presets count:", iconPrefs?.presets?.length);
+    if (!iconPrefs || !Array.isArray(iconPrefs.presets) || iconPrefs.presets.length !== 4) {
+      throw new Error("Preset icons missing or invalid");
+    }
+
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-file-assoc').click();");
+    const fileAssocModalOk = await poll(
+      () =>
+        mainWindow.webContents.executeJavaScript(
+          "!document.getElementById('file-assoc-modal').hidden && " +
+            "Boolean(document.getElementById('btn-set-default')) && " +
+            "Boolean(document.getElementById('default-app-badge')) && " +
+            "document.querySelectorAll('#icon-picker-grid .icon-card').length === 5 && " +
+            "Boolean(document.getElementById('explorer-preview-icon'))"
+        ),
+      5000
+    );
+    console.log("[smoke] file-assoc modal opened:", Boolean(fileAssocModalOk));
+    if (!fileAssocModalOk) throw new Error("File association modal did not open or populate");
+
+    await mainWindow.webContents.executeJavaScript("document.querySelector('[data-icon-id=\"classic\"]').click();");
+    const cardSelectedOk = await mainWindow.webContents.executeJavaScript(
+      "document.querySelector('[data-icon-id=\"classic\"]').classList.contains('selected') && " +
+        "document.getElementById('explorer-preview-icon').innerHTML.includes('PDF')"
+    );
+    console.log("[smoke] card selection and preview ok:", Boolean(cardSelectedOk));
+    if (!cardSelectedOk) throw new Error("Icon card selection or live preview failed");
+
+    const applyRes = await mainWindow.webContents.executeJavaScript(
+      "window.pdfViewer.applyPdfFileIcon({ iconId: 'classic' })"
+    );
+    console.log("[smoke] apply icon result:", JSON.stringify(applyRes));
+    if (!applyRes?.success) throw new Error("applyPdfFileIcon failed: " + JSON.stringify(applyRes));
+
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-file-assoc-close').click();");
+    const closedOk = await poll(
+      () => mainWindow.webContents.executeJavaScript("document.getElementById('file-assoc-modal').hidden"),
+      3000
+    );
+    console.log("[smoke] file-assoc modal closed ok:", Boolean(closedOk));
+    if (!closedOk) throw new Error("File association modal did not close");
+
     console.log("[smoke] PASS");
     app.exit(0);
   } catch (err) {
@@ -547,6 +605,30 @@ if (!gotLock) {
         arch: process.arch,
         osVersion: typeof process.getSystemVersion === "function" ? process.getSystemVersion() : "",
       };
+    });
+
+    ipcMain.handle("fileAssoc:getStatus", async () => {
+      return fileAssoc.checkDefaultStatus();
+    });
+
+    ipcMain.handle("fileAssoc:setDefault", async () => {
+      return fileAssoc.registerAsDefault();
+    });
+
+    ipcMain.handle("fileAssoc:openSettings", async () => {
+      return fileAssoc.openDefaultAppsSettings();
+    });
+
+    ipcMain.handle("fileAssoc:getIconPrefs", async () => {
+      return fileAssoc.getIconPreferences();
+    });
+
+    ipcMain.handle("fileAssoc:applyIcon", async (_event, payload) => {
+      return fileAssoc.applyPdfFileIcon(payload);
+    });
+
+    ipcMain.handle("fileAssoc:chooseCustomIcon", async () => {
+      return fileAssoc.chooseCustomIconDialog(mainWindow);
     });
 
     mainWindow = createWindow();

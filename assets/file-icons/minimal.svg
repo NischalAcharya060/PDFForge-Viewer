@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+    <defs>
+      <filter id="minShadow" x="-10%" y="-5%" width="120%" height="115%">
+        <feDropShadow dx="0" dy="4" stdDeviation="6" flood-opacity="0.14"/>
+      </filter>
+    </defs>
+    <!-- Clean Crisp Document Outline -->
+    <path d="M50 28 h110 l50 50 v142 a6 6 0 0 1 -6 6 H50 a6 6 0 0 1 -6 -6 V34 a6 6 0 0 1 6 -6 z" fill="#ffffff" stroke="#ef4444" stroke-width="4" filter="url(#minShadow)"/>
+    <!-- Fold Line -->
+    <path d="M160 28 v46 a4 4 0 0 0 4 4 h46" fill="none" stroke="#ef4444" stroke-width="3"/>
+    <!-- Scarlet Ribbon Hanging Down -->
+    <path d="M72 26 v60 l18 -10 l18 10 v-60 z" fill="#ef4444"/>
+    <!-- Clean Minimalist PDF Typography -->
+    <text x="128" y="152" text-anchor="middle" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="36" font-weight="800" fill="#1f2328" letter-spacing="1">PDF</text>
+    <!-- Single Accent Divider -->
+    <rect x="88" y="170" width="80" height="3" rx="1.5" fill="#ef4444"/>
+    <rect x="98" y="184" width="60" height="2.5" rx="1.2" fill="#9ca3af"/>
+  </svg>
