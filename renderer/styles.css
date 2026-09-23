@@ -143,6 +143,19 @@ body {
   display: flex;
   align-items: center;
   margin-right: 4px;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.app-brand:hover {
+  opacity: 0.88;
+  transform: scale(1.05);
+}
+
+.app-brand:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .brand-icon {
@@ -556,6 +569,30 @@ input:focus-visible {
   gap: 4px;
   font-size: 11px;
   color: var(--muted);
+}
+
+.empty-footer-info {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.empty-info-link {
+  background: none;
+  border: none;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 4px 12px;
+  border-radius: 6px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+  font-family: inherit;
+}
+
+.empty-info-link:hover {
+  color: var(--accent);
+  background: var(--hover);
 }
 
 kbd {
@@ -1446,21 +1483,10 @@ kbd {
   white-space: nowrap;
 }
 
-/* Password Modal */
-#password-modal {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.45);
-  backdrop-filter: blur(4px);
-  z-index: 50;
-}
-
 #password-modal,
 #properties-modal,
-#shortcuts-modal {
+#shortcuts-modal,
+#about-modal {
   position: fixed;
   inset: 0;
   display: flex;
@@ -1473,7 +1499,8 @@ kbd {
 
 #password-modal[hidden],
 #properties-modal[hidden],
-#shortcuts-modal[hidden] {
+#shortcuts-modal[hidden],
+#about-modal[hidden] {
   display: none !important;
 }
 
@@ -1606,6 +1633,120 @@ kbd {
 
 .shortcut-desc {
   color: var(--text);
+}
+
+/* About Modal Styling */
+.about-hero {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.about-logo-wrap {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, rgba(229, 72, 77, 0.15), rgba(229, 72, 77, 0.05));
+  border: 1px solid rgba(229, 72, 77, 0.25);
+  flex-shrink: 0;
+}
+
+.about-logo-wrap svg {
+  width: 38px;
+  height: 38px;
+}
+
+.about-title-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.about-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.about-app-name {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.2px;
+}
+
+.about-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.about-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0;
+}
+
+.about-info-grid {
+  display: grid;
+  grid-template-columns: 145px 1fr;
+  gap: 8px 14px;
+  font-size: 12.5px;
+  padding: 14px 0;
+  max-height: 320px;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--border);
+}
+
+.about-prop-label {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.about-prop-val {
+  color: var(--text);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  word-break: break-all;
+}
+
+.about-pill {
+  font-size: 11px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 4px;
+  background: var(--hover);
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+
+.about-pill.green {
+  background: rgba(46, 160, 67, 0.12);
+  color: #2ea043;
+  border-color: rgba(46, 160, 67, 0.25);
+}
+
+.about-footer-note {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.4;
 }
 
 /* Sidebar Tabs */

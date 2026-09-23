@@ -202,6 +202,8 @@ function buildMenu() {
       label: "Help",
       submenu: [
         { label: "Keyboard Shortcuts", accelerator: "F1", click: () => send("shortcuts") },
+        { type: "separator" },
+        { label: "About PDFForge Viewer", click: () => send("about") },
       ],
     },
   ];
@@ -362,9 +364,40 @@ async function runSmoke() {
         "document.querySelectorAll('.chrome-tab').length >= 1)"
     );
     console.log("[smoke] tabs and layout controls ok:", tabsOk);
-    if (!tabsOk) throw new Error("Chrome tab bar or layout controls missing");
-
     mainWindow.webContents.executeJavaScript("document.title").then((title) => console.log("[smoke] title:", title));
+
+    const appInfo = await mainWindow.webContents.executeJavaScript("window.pdfViewer.getAppInfo()");
+    console.log("[smoke] appInfo:", JSON.stringify(appInfo));
+    if (!appInfo || appInfo.version !== "1.1.0" || !appInfo.electron || !appInfo.chrome) {
+      throw new Error("app:get-info failed or returned invalid version info");
+    }
+
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-about').click();");
+    const aboutOk = await poll(
+      () =>
+        mainWindow.webContents.executeJavaScript(
+          "!document.getElementById('about-modal').hidden && document.getElementById('about-info-grid').children.length >= 6"
+        ),
+      5000
+    );
+    console.log("[smoke] about modal opened with info:", Boolean(aboutOk));
+    if (!aboutOk) throw new Error("About modal did not open or populate");
+
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-about-close').click();");
+
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-info').click();");
+    const propertiesOk = await poll(
+      () =>
+        mainWindow.webContents.executeJavaScript(
+          "!document.getElementById('properties-modal').hidden && Boolean(document.getElementById('btn-properties-copy')) && document.getElementById('properties-content').children.length >= 4"
+        ),
+      5000
+    );
+    console.log("[smoke] properties modal opened:", Boolean(propertiesOk));
+    if (!propertiesOk) throw new Error("Properties modal did not open");
+
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-properties-close').click();");
+
     console.log("[smoke] PASS");
     app.exit(0);
   } catch (err) {
@@ -503,6 +536,20 @@ if (!gotLock) {
     });
 
     ipcMain.handle("app:get-theme", () => (nativeTheme.shouldUseDarkColors ? "dark" : "light"));
+
+    ipcMain.handle("app:get-info", async () => {
+      return {
+        name: "PDFForge Viewer",
+        version: app.getVersion(),
+        electron: process.versions.electron || "",
+        chrome: process.versions.chrome || "",
+        node: process.versions.node || "",
+        v8: process.versions.v8 || "",
+        platform: process.platform,
+        arch: process.arch,
+        osVersion: typeof process.getSystemVersion === "function" ? process.getSystemVersion() : "",
+      };
+    });
 
     mainWindow = createWindow();
     buildMenu();

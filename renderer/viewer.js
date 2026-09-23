@@ -113,8 +113,18 @@ const el = {
   propertiesModal: document.getElementById("properties-modal"),
   propertiesContent: document.getElementById("properties-content"),
   btnPropertiesClose: document.getElementById("btn-properties-close"),
+  btnPropertiesCopy: document.getElementById("btn-properties-copy"),
   shortcutsModal: document.getElementById("shortcuts-modal"),
   btnShortcutsClose: document.getElementById("btn-shortcuts-close"),
+  aboutModal: document.getElementById("about-modal"),
+  aboutVersionBadge: document.getElementById("about-version-badge"),
+  aboutInfoGrid: document.getElementById("about-info-grid"),
+  btnAbout: document.getElementById("btn-about"),
+  btnAboutClose: document.getElementById("btn-about-close"),
+  btnAboutCopy: document.getElementById("btn-about-copy"),
+  btnEmptyAbout: document.getElementById("btn-empty-about"),
+  emptyVersionLabel: document.getElementById("empty-version-label"),
+  appBrandBtn: document.getElementById("app-brand-btn"),
   printHost: document.getElementById("print-host"),
   findBar: document.getElementById("find-bar"),
   findInput: document.getElementById("find-input"),
@@ -941,11 +951,15 @@ function effectiveScale() {
 
 function updateControls() {
   const hasDoc = Boolean(state.doc);
+  const isEditor = Boolean(state.editor && state.editor.active);
+  const hasContent = hasDoc || isEditor;
+
+  if (el.btnSave) el.btnSave.disabled = !hasContent;
+  if (el.btnPrint) el.btnPrint.disabled = !hasContent;
+  if (el.btnFind) el.btnFind.disabled = !hasContent;
+  if (el.btnInfo) el.btnInfo.disabled = !hasContent;
+
   for (const btn of [
-    el.btnSave,
-    el.btnPrint,
-    el.btnFind,
-    el.btnInfo,
     el.btnZoomIn,
     el.btnZoomOut,
     el.btnRotate,
@@ -1791,6 +1805,7 @@ function hideAllOverlays() {
   el.dropOverlay.hidden = true;
   if (el.propertiesModal) el.propertiesModal.hidden = true;
   if (el.shortcutsModal) el.shortcutsModal.hidden = true;
+  if (el.aboutModal) el.aboutModal.hidden = true;
 }
 
 function setEditorStatus(message) {
@@ -2303,45 +2318,256 @@ function showShortcutsModal() {
   el.shortcutsModal.hidden = false;
 }
 
+let cachedAppInfo = null;
+let currentPropertiesRows = [];
+
 function formatFileSize(bytes) {
   if (!Number.isFinite(bytes) || bytes <= 0) return "—";
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB (${bytes.toLocaleString()} bytes)`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB (${bytes.toLocaleString()} bytes)`;
+}
+
+function formatPdfDate(raw) {
+  if (!raw) return "—";
+  const s = String(raw).trim();
+  const m = s.match(/^D:?(\d{4})(\d{2})?(\d{2})?(\d{2})?(\d{2})?(\d{2})?/);
+  if (m) {
+    const year = m[1];
+    const month = m[2] || "01";
+    const day = m[3] || "01";
+    const hour = m[4] || "00";
+    const min = m[5] || "00";
+    const sec = m[6] || "00";
+    const d = new Date(`${year}-${month}-${day}T${hour}:${min}:${sec}`);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleString();
+    }
+  }
+  const d2 = new Date(s);
+  if (!isNaN(d2.getTime())) {
+    return d2.toLocaleString();
+  }
+  return s.replace(/^D:/, "");
+}
+
+function detectPaperFormat(w, h) {
+  const isLandscape = w > h;
+  const pw = isLandscape ? h : w;
+  const ph = isLandscape ? w : h;
+  const orient = isLandscape ? "Landscape" : "Portrait";
+  
+  if (Math.abs(pw - 595.28) < 8 && Math.abs(ph - 841.89) < 8) return `A4 (${orient})`;
+  if (Math.abs(pw - 612) < 8 && Math.abs(ph - 792) < 8) return `US Letter (${orient})`;
+  if (Math.abs(pw - 612) < 8 && Math.abs(ph - 1008) < 8) return `US Legal (${orient})`;
+  if (Math.abs(pw - 841.89) < 8 && Math.abs(ph - 1190.55) < 8) return `A3 (${orient})`;
+  if (Math.abs(pw - 419.53) < 8 && Math.abs(ph - 595.28) < 8) return `A5 (${orient})`;
+  if (Math.abs(pw - 792) < 8 && Math.abs(ph - 1224) < 8) return `US Tabloid (${orient})`;
+  if (Math.abs(pw - 504) < 8 && Math.abs(ph - 720) < 8) return `B5 (${orient})`;
+  return `Custom (${orient})`;
+}
+
+async function copyToClipboard(text) {
+  try {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      await navigator.clipboard.writeText(text);
+      return true;
+    }
+  } catch {}
+  try {
+    const ta = document.createElement("textarea");
+    ta.value = text;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.focus();
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
+async function getOrFetchAppInfo() {
+  if (cachedAppInfo) return cachedAppInfo;
+  try {
+    if (window.pdfViewer && window.pdfViewer.getAppInfo) {
+      cachedAppInfo = await window.pdfViewer.getAppInfo();
+    }
+  } catch (err) {
+    console.warn("Could not get app info:", err);
+  }
+  if (!cachedAppInfo) {
+    cachedAppInfo = {
+      name: "PDFForge Viewer",
+      version: "1.1.0",
+      electron: "Desktop",
+      chrome: "Chromium",
+      node: "Node.js",
+      v8: "V8",
+      platform: "win32",
+      arch: "x64",
+      osVersion: "",
+    };
+  }
+  return cachedAppInfo;
+}
+
+async function showAboutModal() {
+  hideAllOverlays();
+  if (el.aboutModal) el.aboutModal.hidden = false;
+  const info = await getOrFetchAppInfo();
+  if (el.aboutVersionBadge) el.aboutVersionBadge.textContent = `v${info.version || "1.1.0"}`;
+  if (el.emptyVersionLabel) el.emptyVersionLabel.textContent = `v${info.version || "1.1.0"}`;
+
+  const platformName = info.platform === "win32" ? "Windows" : info.platform === "darwin" ? "macOS" : info.platform === "linux" ? "Linux" : info.platform;
+  const osString = `${platformName} ${info.arch ? `(${info.arch})` : ""} ${info.osVersion || ""}`.trim();
+
+  const rows = [
+    ["App Version", `${info.version || "1.1.0"} <span class="about-pill">Stable</span>`],
+    ["Electron Runtime", `v${info.electron || "—"}`],
+    ["Chromium Engine", `v${info.chrome || "—"}`],
+    ["Node.js Engine", `v${info.node || "—"}`],
+    ["V8 JavaScript", `v${info.v8 || "—"}`],
+    ["Operating System", osString],
+    ["PDF Reader Engine", `Mozilla PDF.js v6.3.289`],
+    ["PDF Document Engine", `PDF-Lib v1.17.1`],
+    ["Rich Editor Engine", `Quill v2.0.3`],
+    ["Security Architecture", `<span class="about-pill green">Sandbox Enabled · Context Isolated</span>`],
+    ["License", "MIT Open Source License"],
+  ];
+
+  if (el.aboutInfoGrid) {
+    el.aboutInfoGrid.innerHTML = rows
+      .map(([label, val]) => `<span class="about-prop-label">${escapeHtml(label)}</span><span class="about-prop-val">${val}</span>`)
+      .join("");
+  }
+}
+
+async function copyAboutInfo() {
+  const info = await getOrFetchAppInfo();
+  const platformName = info.platform === "win32" ? "Windows" : info.platform === "darwin" ? "macOS" : info.platform === "linux" ? "Linux" : info.platform;
+  const osString = `${platformName} ${info.arch ? `(${info.arch})` : ""} ${info.osVersion || ""}`.trim();
+
+  const text = [
+    `# PDFForge Viewer Diagnostic & Version Info`,
+    `- **Application**: PDFForge Viewer`,
+    `- **App Version**: ${info.version || "1.1.0"}`,
+    `- **Electron**: ${info.electron || "—"}`,
+    `- **Chromium**: ${info.chrome || "—"}`,
+    `- **Node.js**: ${info.node || "—"}`,
+    `- **V8**: ${info.v8 || "—"}`,
+    `- **OS / Platform**: ${osString}`,
+    `- **PDF.js Engine**: 6.3.289`,
+    `- **PDF-Lib**: 1.17.1`,
+    `- **Quill Engine**: 2.0.3`,
+    `- **Sandbox Isolation**: Active`,
+    `- **Privacy / Mode**: 100% Offline (Zero Telemetry)`,
+    `- **License**: MIT`,
+  ].join("\n");
+
+  const copied = await copyToClipboard(text);
+  if (copied) {
+    showToast("System & version info copied to clipboard", "success");
+  } else {
+    showToast("Could not copy info to clipboard", "error");
+  }
 }
 
 async function showPropertiesModal() {
-  if (!state.doc) return;
+  if (!state.doc && !state.editor.active) return;
   hideAllOverlays();
   el.propertiesContent.innerHTML = "<span class='prop-label'>Loading…</span><span class='prop-val'>Reading document metadata…</span>";
   el.propertiesModal.hidden = false;
 
   try {
-    const meta = await state.doc.getMetadata();
-    const info = (meta && meta.info) || {};
-    const first = state.pages[0];
-    const dims = first ? `${Math.round((first.vp1.width * 72) / 96)} × ${Math.round((first.vp1.height * 72) / 96)} pt` : "—";
+    if (state.editor.active) {
+      const chars = editorCharCount();
+      const words = editorWordCount();
+      const rawHtml = quill && quill.root ? quill.root.innerHTML : "";
+      const pageBreaks = (rawHtml.match(/word-page-break|\f/g) || []).length;
+      const totalPages = pageBreaks + 1;
+      const paragraphs = quill && quill.root ? quill.root.querySelectorAll("p, h1, h2, h3, h4, h5, h6, li").length : 1;
+      const opt = state.editor.options || {};
+      const targetSize = (opt.pageSize || "a4").toUpperCase();
+      const marginMm = Math.round((opt.margin || 56) * 25.4 / 72);
 
-    const rows = [
-      ["File Name", state.name || "—"],
-      ["File Location", state.filePath || "Local Session"],
-      ["File Size", state.data ? formatFileSize(state.data.byteLength) : "—"],
-      ["Page Count", `${state.pages.length} pages`],
-      ["Page Dimensions", dims],
-      ["Title", info.Title || "—"],
-      ["Author", info.Author || "—"],
-      ["Subject", info.Subject || "—"],
-      ["Creator Tool", info.Creator || "—"],
-      ["PDF Producer", info.Producer || "—"],
-      ["Creation Date", info.CreationDate ? String(info.CreationDate).replace(/^D:/, "") : "—"],
-      ["PDF Version", info.PDFFormatVersion || "1.4+"],
-    ];
+      currentPropertiesRows = [
+        ["Document Title", state.editor.fileName || "Untitled Document"],
+        ["Document Type", "Rich Text Document (PDF-Ready Word Desk)"],
+        ["Save Status", state.editor.dirty ? "Unsaved changes" : "Saved"],
+        ["Word Count", `${words.toLocaleString()} words`],
+        ["Character Count", `${chars.toLocaleString()} characters`],
+        ["Paragraphs", `${paragraphs} paragraphs`],
+        ["Estimated PDF Pages", `${totalPages} page${totalPages === 1 ? "" : "s"}`],
+        ["Target Page Size", `${targetSize} Portrait (${targetSize === "LETTER" ? "612 × 792 pt" : "595 × 842 pt"})`],
+        ["Target Margins", `${opt.margin || 56} pt (~${marginMm} mm)`],
+        ["Typography", `${opt.fontSize || 11} pt font · ${opt.lineSpacing || 1.45}× line spacing`],
+        ["Page Numbering", opt.pageNumbers !== false ? "Enabled" : "Disabled"],
+        ["Export Format", "Adobe PDF (.pdf) via Built-in Rich Engine"],
+      ];
+    } else {
+      const meta = await state.doc.getMetadata();
+      const info = (meta && meta.info) || {};
+      const first = state.pages[0];
+      let dims = "—";
+      if (first) {
+        const ptW = Math.round(first.page.view ? Math.abs(first.page.view[2] - first.page.view[0]) : (first.vp1.width * 72) / 96);
+        const ptH = Math.round(first.page.view ? Math.abs(first.page.view[3] - first.page.view[1]) : (first.vp1.height * 72) / 96);
+        const mmW = (ptW * 25.4 / 72).toFixed(1);
+        const mmH = (ptH * 25.4 / 72).toFixed(1);
+        const inW = (ptW / 72).toFixed(2);
+        const inH = (ptH / 72).toFixed(2);
+        const formatName = detectPaperFormat(ptW, ptH);
+        dims = `${ptW} × ${ptH} pt (${mmW} × ${mmH} mm / ${inW} × ${inH} in) — ${formatName}`;
+      }
 
-    el.propertiesContent.innerHTML = rows
+      currentPropertiesRows = [
+        ["File Name", state.name || "Untitled.pdf"],
+        ["File Location", state.filePath || "Local Session (Memory)"],
+        ["File Size", state.data ? formatFileSize(state.data.byteLength) : "—"],
+        ["Page Count", `${state.pages.length} page${state.pages.length === 1 ? "" : "s"}`],
+        ["Page Dimensions", dims],
+        ["Title", info.Title || "—"],
+        ["Author", info.Author || "—"],
+        ["Subject", info.Subject || "—"],
+        ["Keywords", info.Keywords || "—"],
+        ["Creator Tool", info.Creator || "—"],
+        ["PDF Producer", info.Producer || "—"],
+        ["Creation Date", formatPdfDate(info.CreationDate)],
+        ["Modification Date", formatPdfDate(info.ModDate)],
+        ["PDF Version", info.PDFFormatVersion || (state.doc.pdfFormatVersion ? `PDF ${state.doc.pdfFormatVersion}` : "1.4+")],
+        ["Fast Web View", info.IsLinearized ? "Yes (Linearized / Optimized)" : "No (Standard)"],
+        ["Security / Encryption", state.passwordValue ? "Encrypted (Password Protected)" : "Standard (Unencrypted)"],
+      ];
+    }
+
+    el.propertiesContent.innerHTML = currentPropertiesRows
       .map(([label, val]) => `<span class="prop-label">${escapeHtml(label)}</span><span class="prop-val">${escapeHtml(val)}</span>`)
       .join("");
   } catch {
     el.propertiesContent.innerHTML = "<span class='prop-label'>Error</span><span class='prop-val'>Could not read document properties</span>";
+  }
+}
+
+async function copyPropertiesInfo() {
+  if (!currentPropertiesRows || !currentPropertiesRows.length) {
+    showToast("No document properties to copy", "info");
+    return;
+  }
+  const title = state.editor.active ? `Document Properties: ${state.editor.fileName}` : `PDF Properties: ${state.name || "Document"}`;
+  const lines = [`# ${title}`, ""];
+  for (const [k, v] of currentPropertiesRows) {
+    lines.push(`- **${k}**: ${v}`);
+  }
+  const text = lines.join("\n");
+  const copied = await copyToClipboard(text);
+  if (copied) {
+    showToast("Document properties copied to clipboard", "success");
+  } else {
+    showToast("Could not copy properties to clipboard", "error");
   }
 }
 
@@ -2744,10 +2970,24 @@ function bindEvents() {
   if (el.btnFind) el.btnFind.addEventListener("click", () => toggleFindBar());
   if (el.btnInfo) el.btnInfo.addEventListener("click", showPropertiesModal);
   if (el.btnShortcuts) el.btnShortcuts.addEventListener("click", showShortcutsModal);
+  if (el.btnAbout) el.btnAbout.addEventListener("click", showAboutModal);
+  if (el.appBrandBtn) {
+    el.appBrandBtn.addEventListener("click", showAboutModal);
+    el.appBrandBtn.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        showAboutModal();
+      }
+    });
+  }
+  if (el.btnEmptyAbout) el.btnEmptyAbout.addEventListener("click", showAboutModal);
   if (el.btnPropertiesClose) el.btnPropertiesClose.addEventListener("click", hideAllOverlays);
+  if (el.btnPropertiesCopy) el.btnPropertiesCopy.addEventListener("click", copyPropertiesInfo);
   if (el.btnShortcutsClose) el.btnShortcutsClose.addEventListener("click", hideAllOverlays);
+  if (el.btnAboutClose) el.btnAboutClose.addEventListener("click", hideAllOverlays);
+  if (el.btnAboutCopy) el.btnAboutCopy.addEventListener("click", copyAboutInfo);
 
-  [el.propertiesModal, el.shortcutsModal, el.passwordModal].forEach((overlay) => {
+  [el.propertiesModal, el.shortcutsModal, el.passwordModal, el.aboutModal].forEach((overlay) => {
     if (overlay) {
       overlay.addEventListener("click", (e) => {
         if (e.target === overlay) {
@@ -3108,7 +3348,7 @@ function bindEvents() {
         toggleFindBar(false);
         return;
       }
-      if (!el.propertiesModal.hidden || !el.shortcutsModal.hidden || !el.passwordModal.hidden) {
+      if (!el.propertiesModal.hidden || !el.shortcutsModal.hidden || !el.passwordModal.hidden || (el.aboutModal && !el.aboutModal.hidden)) {
         e.preventDefault();
         hideAllOverlays();
         return;
@@ -3215,6 +3455,9 @@ function bindEvents() {
       case "shortcuts":
         showShortcutsModal();
         break;
+      case "about":
+        showAboutModal();
+        break;
       case "print":
         printDocument();
         break;
@@ -3253,6 +3496,12 @@ async function init() {
   createNewTab();
   window.__pdfViewerReady = true;
   document.body.dataset.ready = "1";
+  getOrFetchAppInfo().then((info) => {
+    if (info && info.version) {
+      if (el.emptyVersionLabel) el.emptyVersionLabel.textContent = `v${info.version}`;
+      if (el.aboutVersionBadge) el.aboutVersionBadge.textContent = `v${info.version}`;
+    }
+  }).catch(() => {});
 }
 
 init();

@@ -37,7 +37,7 @@
 
     <header id="toolbar">
       <div class="toolbar-group left">
-        <div class="app-brand" title="PDFForge Desktop Viewer">
+        <div class="app-brand" id="app-brand-btn" role="button" tabindex="0" title="About PDFForge Desktop Viewer">
           <svg viewBox="0 0 24 24" fill="none" class="brand-icon">
             <rect width="24" height="24" rx="6" fill="#e5484d" />
             <path d="M7 6h6l4 4v8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="#fff" opacity="0.95" />
@@ -110,9 +110,10 @@
         </button>
         <button id="btn-info" class="icon-btn" title="Document properties (Ctrl+D)" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <line x1="12" y1="9" x2="12.01" y2="9" />
           </svg>
         </button>
         <span class="toolbar-sep"></span>
@@ -193,6 +194,13 @@
             <circle cx="12" cy="12" r="10" />
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
             <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </button>
+        <button id="btn-about" class="icon-btn" title="About PDFForge Viewer">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
           </svg>
         </button>
         <button id="btn-theme" class="icon-btn" title="Toggle dark mode (D)">
@@ -282,6 +290,12 @@
           <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>P</kbd> Print</span>
           <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>R</kbd> Rotate</span>
           <span class="shortcut-chip"><kbd>?</kbd> Help</span>
+        </div>
+
+        <div class="empty-footer-info">
+          <button id="btn-empty-about" class="empty-info-link" type="button" title="View app version and system diagnostics">
+            PDFForge Viewer <span id="empty-version-label">v1.1.0</span> • System &amp; Version Info
+          </button>
         </div>
       </div>
     </div>
@@ -579,16 +593,24 @@
       <div class="modal modal-wide">
         <div class="modal-head">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="16" x2="12" y2="12" />
-            <line x1="12" y1="8" x2="12.01" y2="8" />
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <polyline points="14 2 14 8 20 8" />
+            <line x1="12" y1="18" x2="12" y2="12" />
+            <line x1="12" y1="9" x2="12.01" y2="9" />
           </svg>
           <span>Document Properties</span>
         </div>
         <div class="properties-grid" id="properties-content">
           <!-- Filled dynamically -->
         </div>
-        <div class="modal-actions">
+        <div class="modal-actions" style="justify-content: space-between;">
+          <button id="btn-properties-copy" class="plain-btn" type="button" title="Copy document properties to clipboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copy Properties</span>
+          </button>
           <button id="btn-properties-close" class="primary-btn">Close</button>
         </div>
       </div>
@@ -624,10 +646,56 @@
           <div class="shortcut-row"><span class="shortcut-desc">Toggle Sidebar</span><span><kbd>T</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Toggle Dark Mode</span><span><kbd>D</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Document Properties</span><span><kbd>Ctrl</kbd> + <kbd>D</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">About PDFForge Viewer</span><span><kbd>Help Menu</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Show Shortcuts</span><span><kbd>?</kbd> or <kbd>F1</kbd></span></div>
         </div>
         <div class="modal-actions">
           <button id="btn-shortcuts-close" class="primary-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- About PDFForge Viewer Modal -->
+    <div id="about-modal" hidden>
+      <div class="modal modal-wide">
+        <div class="about-hero">
+          <div class="about-logo-wrap">
+            <svg viewBox="0 0 24 24" fill="none">
+              <rect width="24" height="24" rx="6" fill="#e5484d" />
+              <path d="M7 6h6l4 4v8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="#fff" opacity="0.95" />
+              <path d="M13 6v4h4" fill="#e5484d" opacity="0.4" />
+              <text x="8" y="16" font-size="6" font-weight="900" fill="#e5484d" font-family="system-ui">PDF</text>
+            </svg>
+          </div>
+          <div class="about-title-box">
+            <div class="about-title-row">
+              <span class="about-app-name">PDFForge Viewer</span>
+              <span id="about-version-badge" class="about-badge">v1.1.0</span>
+            </div>
+            <p class="about-desc">Fast, offline &amp; private desktop PDF reader and document suite.</p>
+          </div>
+        </div>
+
+        <div class="about-info-grid" id="about-info-grid">
+          <!-- Filled dynamically with system, electron, and engine versions -->
+        </div>
+
+        <div class="about-footer-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px; color: #2ea043; flex-shrink: 0;">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          <span>100% Offline &amp; Private — zero telemetry, no external network requests.</span>
+        </div>
+
+        <div class="modal-actions" style="justify-content: space-between;">
+          <button id="btn-about-copy" class="plain-btn" type="button" title="Copy system and version information to clipboard">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+            <span>Copy System Info</span>
+          </button>
+          <button id="btn-about-close" class="primary-btn">Close</button>
         </div>
       </div>
     </div>

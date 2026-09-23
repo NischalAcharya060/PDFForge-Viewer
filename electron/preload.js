@@ -24,6 +24,7 @@ contextBridge.exposeInMainWorld("pdfViewer", {
   },
   setTheme: (theme) => ipcRenderer.invoke("app:set-theme", theme),
   getTheme: () => ipcRenderer.invoke("app:get-theme"),
+  getAppInfo: () => ipcRenderer.invoke("app:get-info"),
   onOpenFile: subscribe("open-file"),
   onCommand: subscribe("menu:command"),
 });
