@@ -12,6 +12,7 @@ contextBridge.exposeInMainWorld("pdfViewer", {
   openDialog: () => ipcRenderer.invoke("dialog:open-pdf"),
   readFile: (filePath) => ipcRenderer.invoke("file:read", filePath),
   createTextPdf: (payload) => ipcRenderer.invoke("dialog:create-text-pdf", payload),
+  savePdf: (payload) => ipcRenderer.invoke("dialog:save-pdf", payload),
   addBlankPage: (data) => ipcRenderer.invoke("pdf:add-blank-page", data),
   appendPdf: (payload) => ipcRenderer.invoke("pdf:append-pdf", payload),
   getPathForFile: (file) => {

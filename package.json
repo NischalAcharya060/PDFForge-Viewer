@@ -9,8 +9,11 @@
     "dev": "electron .",
     "start": "electron .",
     "smoke": "electron . --smoke",
+    "build": "electron-builder",
+    "build:dir": "electron-builder --dir",
     "dist": "electron-builder --win nsis",
     "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/rich-to-pdf.js && node --check renderer/viewer.js",
+    "test": "npm run lint && npm run test:rich",
     "test:rich": "node scripts/rich-smoke.js"
   },
   "dependencies": {

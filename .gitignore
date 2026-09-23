@@ -9,6 +9,7 @@ dist/
 npm-debug.log*
 yarn-debug.log*
 samples/rich-smoke.pdf
+rich-smoke.pdf
 
 # OS files
 .DS_Store

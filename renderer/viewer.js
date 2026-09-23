@@ -67,6 +67,7 @@ const el = {
   secondaryPageHost: document.getElementById("secondary-page-host"),
   btnNew: document.getElementById("btn-new"),
   btnOpen: document.getElementById("btn-open"),
+  btnSave: document.getElementById("btn-save"),
   btnPrint: document.getElementById("btn-print"),
   btnFind: document.getElementById("btn-find"),
   btnInfo: document.getElementById("btn-info"),
@@ -151,6 +152,13 @@ const el = {
   btnDocZoomOut: document.getElementById("btn-doc-zoom-out"),
   btnDocZoomIn: document.getElementById("btn-doc-zoom-in"),
   docZoomLabel: document.getElementById("doc-zoom-label"),
+  toastContainer: document.getElementById("toast-container"),
+  tabContextMenu: document.getElementById("tab-context-menu"),
+  ctxCloseTab: document.getElementById("ctx-close-tab"),
+  ctxCloseOthers: document.getElementById("ctx-close-others"),
+  ctxCloseRight: document.getElementById("ctx-close-right"),
+  ctxDuplicateTab: document.getElementById("ctx-duplicate-tab"),
+  ctxNewTab: document.getElementById("ctx-new-tab"),
 };
 
 for (const preset of ZOOM_PRESETS) {
@@ -172,17 +180,76 @@ let isSplitActive = false;
 let tabCounter = 0;
 let splitDoc = null;
 let splitPages = [];
+let tabDragSourceId = null;
+let contextMenuTargetTabId = null;
+
+function showTabContextMenu(x, y, tabId) {
+  if (!el.tabContextMenu) return;
+  contextMenuTargetTabId = tabId;
+  const menuW = 190;
+  const menuH = 180;
+  const posX = Math.min(x, Math.max(10, window.innerWidth - menuW - 10));
+  const posY = Math.min(y, Math.max(10, window.innerHeight - menuH - 10));
+  el.tabContextMenu.style.left = `${posX}px`;
+  el.tabContextMenu.style.top = `${posY}px`;
+  el.tabContextMenu.hidden = false;
+}
+
+function hideTabContextMenu() {
+  if (el.tabContextMenu) {
+    el.tabContextMenu.hidden = true;
+    contextMenuTargetTabId = null;
+  }
+}
+
+async function closeOtherTabs(targetId) {
+  hideTabContextMenu();
+  const others = tabs.filter((t) => t.id !== targetId);
+  for (const t of others) {
+    await closeTab(t.id);
+  }
+}
+
+async function closeTabsToRight(targetId) {
+  hideTabContextMenu();
+  const idx = tabs.findIndex((t) => t.id === targetId);
+  if (idx === -1) return;
+  const toRight = tabs.slice(idx + 1);
+  for (const t of toRight) {
+    await closeTab(t.id);
+  }
+}
+
+function duplicateTab(targetId) {
+  hideTabContextMenu();
+  const tab = tabs.find((t) => t.id === targetId);
+  if (!tab) return;
+  if (tab.type === "pdf" && tab.data) {
+    createNewTab({ type: "pdf", name: tab.name, data: tab.data, filePath: tab.filePath });
+  } else if (tab.type === "editor") {
+    const html = tab.id === activeTabId && quill ? quill.getSemanticHTML() : (tab.editor?.html || "");
+    const baseName = tab.name.replace(/\s*\(\d+\)$/, "");
+    const newName = `${baseName} (Copy)`;
+    createNewTab({ type: "editor", name: newName });
+    if (quill && html) quill.clipboard.dangerouslyPasteHTML(html);
+  } else {
+    createNewTab();
+  }
+}
 
 function renderTabBar() {
   if (!el.tabsList) return;
   el.tabsList.innerHTML = "";
 
-  for (const tab of tabs) {
+  for (let i = 0; i < tabs.length; i++) {
+    const tab = tabs[i];
     const tabEl = document.createElement("div");
     tabEl.className = "chrome-tab" + (tab.id === activeTabId ? " active" : "");
     tabEl.dataset.tabId = tab.id;
+    tabEl.dataset.index = String(i);
     tabEl.setAttribute("role", "tab");
     tabEl.setAttribute("aria-selected", String(tab.id === activeTabId));
+    tabEl.setAttribute("draggable", "true");
     tabEl.title = tab.filePath ? `${tab.name} (${tab.filePath})` : tab.name;
 
     let iconSvg = "";
@@ -203,7 +270,8 @@ function renderTabBar() {
       </svg>`;
     }
 
-    const isDirty = tab.type === "editor" && (tab.editor?.dirty || (tab.id === activeTabId && state.editor.dirty));
+    const isDirty = (tab.type === "editor" && (tab.editor?.dirty || (tab.id === activeTabId && state.editor.dirty))) ||
+                    Boolean(tab.dirty || (tab.id === activeTabId && state.pdfModified));
 
     tabEl.innerHTML = `
       <span class="chrome-tab-icon">${iconSvg}</span>
@@ -212,6 +280,7 @@ function renderTabBar() {
       <button class="chrome-tab-close" type="button" title="Close tab (Ctrl+W)">&times;</button>
     `;
 
+    // Click to switch tab
     tabEl.addEventListener("click", (e) => {
       if (e.target.closest(".chrome-tab-close")) return;
       if (tab.id !== activeTabId) {
@@ -220,10 +289,55 @@ function renderTabBar() {
       }
     });
 
+    // Middle-click to close
     tabEl.addEventListener("auxclick", (e) => {
       if (e.button === 1) {
         e.preventDefault();
         closeTab(tab.id);
+      }
+    });
+
+    // Right-click context menu
+    tabEl.addEventListener("contextmenu", (e) => {
+      e.preventDefault();
+      showTabContextMenu(e.clientX, e.clientY, tab.id);
+    });
+
+    // Tab Drag & Drop Reordering
+    tabEl.addEventListener("dragstart", (e) => {
+      tabDragSourceId = tab.id;
+      tabEl.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+      e.dataTransfer.setData("text/plain", tab.id);
+    });
+
+    tabEl.addEventListener("dragend", () => {
+      tabDragSourceId = null;
+      tabEl.classList.remove("dragging");
+      document.querySelectorAll(".chrome-tab.drag-over").forEach((el) => el.classList.remove("drag-over"));
+    });
+
+    tabEl.addEventListener("dragover", (e) => {
+      if (!tabDragSourceId || tabDragSourceId === tab.id) return;
+      e.preventDefault();
+      e.dataTransfer.dropEffect = "move";
+      tabEl.classList.add("drag-over");
+    });
+
+    tabEl.addEventListener("dragleave", () => {
+      tabEl.classList.remove("drag-over");
+    });
+
+    tabEl.addEventListener("drop", (e) => {
+      e.preventDefault();
+      tabEl.classList.remove("drag-over");
+      if (!tabDragSourceId || tabDragSourceId === tab.id) return;
+      const fromIdx = tabs.findIndex((t) => t.id === tabDragSourceId);
+      const toIdx = tabs.findIndex((t) => t.id === tab.id);
+      if (fromIdx !== -1 && toIdx !== -1) {
+        const [movedTab] = tabs.splice(fromIdx, 1);
+        tabs.splice(toIdx, 0, movedTab);
+        renderTabBar();
       }
     });
 
@@ -326,9 +440,13 @@ function restoreTab(tab) {
 
     if (el.pageHost) {
       el.pageHost.textContent = "";
-      if (tab.pageHostFragment) {
+      if (tab.pageHostFragment && tab.pageHostFragment.childNodes.length > 0) {
         el.pageHost.appendChild(tab.pageHostFragment);
         tab.pageHostFragment = null;
+      } else if (state.pages && state.pages.length) {
+        for (const p of state.pages) {
+          if (p.div) el.pageHost.appendChild(p.div);
+        }
       }
       el.pageHost.classList.toggle("two-page-mode", Boolean(state.twoPageMode));
     }
@@ -340,7 +458,7 @@ function restoreTab(tab) {
     el.docName.title = state.filePath ? `${state.name} (${state.filePath})` : state.name;
     document.title = `${state.name} — PDFForge Viewer`;
 
-    if (tab.thumbFragment) {
+    if (tab.thumbFragment && tab.thumbFragment.childNodes.length > 0) {
       el.thumbList.textContent = "";
       el.thumbList.appendChild(tab.thumbFragment);
       tab.thumbFragment = null;
@@ -427,6 +545,15 @@ async function closeTab(tabId) {
 
   if (splitTabId === tabId) {
     closeSplitView();
+  }
+
+  if (activeTabId === tabId) {
+    if (state.editor.active) {
+      state.editor.active = false;
+      state.editor.dirty = false;
+    }
+    state.doc = null;
+    state.pages = [];
   }
 
   tabs.splice(index, 1);
@@ -552,10 +679,11 @@ async function renderSplitDoc(tab) {
       const scale = availW / vp1.width;
       const vp = page.getViewport({ scale });
       const pageDiv = document.createElement("div");
-      pageDiv.className = "page";
+      pageDiv.className = "pdf-page";
       pageDiv.style.width = `${Math.round(vp.width)}px`;
       pageDiv.style.height = `${Math.round(vp.height)}px`;
       pageDiv.style.marginBottom = "16px";
+      pageDiv.style.background = "#ffffff";
       pageDiv.style.boxShadow = "var(--page-shadow)";
       const canvas = document.createElement("canvas");
       canvas.width = Math.ceil(vp.width * window.devicePixelRatio);
@@ -597,6 +725,37 @@ function setupSplitDivider() {
   });
 }
 
+function showToast(message, type = "info", duration = 3200) {
+  if (!el.toastContainer) return;
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  let iconSvg = "";
+  if (type === "success") {
+    iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`;
+  } else if (type === "error") {
+    iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+  } else {
+    iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
+  }
+  toast.innerHTML = `${iconSvg}<span>${escapeHtml(message)}</span>`;
+  el.toastContainer.appendChild(toast);
+
+  const removeToast = () => {
+    toast.classList.add("toast-hiding");
+    setTimeout(() => {
+      if (toast.parentNode) toast.parentNode.removeChild(toast);
+    }, 200);
+  };
+
+  setTimeout(removeToast, duration);
+}
+
+function goToPage(pageNumber) {
+  if (!state.doc || !state.pages.length) return;
+  const idx = clamp(pageNumber - 1, 0, state.pages.length - 1);
+  scrollToPage(idx);
+}
+
 async function addBlankPageToCurrentDoc() {
   if (!state.data) return;
   setLoading(true);
@@ -608,11 +767,12 @@ async function addBlankPageToCurrentDoc() {
       if (currentTab) currentTab.data = res.data;
       await openDocument(res.data, state.name, state.filePath);
       goToPage(state.pages.length);
+      showToast("Added blank page to document", "success");
     } else {
-      alert("Failed to add blank page: " + (res?.error || "unknown error"));
+      showToast("Failed to add blank page: " + (res?.error || "unknown error"), "error");
     }
   } catch (err) {
-    alert("Error adding blank page: " + err.message);
+    showToast("Error adding blank page: " + (err && err.message ? err.message : String(err)), "error");
   } finally {
     setLoading(false);
   }
@@ -635,11 +795,12 @@ async function appendPdfToCurrentDoc() {
       const prevCount = state.pages.length;
       await openDocument(res.data, state.name, state.filePath);
       goToPage(prevCount + 1);
+      showToast("Inserted pages from PDF", "success");
     } else {
-      alert("Failed to insert pages: " + (res?.error || "unknown error"));
+      showToast("Failed to insert pages: " + (res?.error || "unknown error"), "error");
     }
   } catch (err) {
-    alert("Error inserting pages: " + err.message);
+    showToast("Error inserting pages: " + (err && err.message ? err.message : String(err)), "error");
   } finally {
     setLoading(false);
   }
@@ -712,6 +873,18 @@ if (typeof Quill !== "undefined" && el.editorContent) {
     placeholder: "Start typing your Word document here… Format text with the ribbon above.",
   });
   window.__quill = quill;
+
+  if (el.editorContent) {
+    el.editorContent.addEventListener("click", (e) => {
+      const link = e.target.closest("a");
+      if (link && link.href) {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          window.open(link.href, "_blank");
+        }
+      }
+    });
+  }
 }
 
 function editorHasContent() {
@@ -769,11 +942,10 @@ function effectiveScale() {
 function updateControls() {
   const hasDoc = Boolean(state.doc);
   for (const btn of [
+    el.btnSave,
     el.btnPrint,
     el.btnFind,
     el.btnInfo,
-    el.btnPrev,
-    el.btnNext,
     el.btnZoomIn,
     el.btnZoomOut,
     el.btnRotate,
@@ -783,6 +955,14 @@ function updateControls() {
     el.btnAddPage,
   ]) {
     if (btn) btn.disabled = !hasDoc;
+  }
+  if (el.btnPrev) {
+    const onFirst = state.twoPageMode ? state.currentPage <= 2 : state.currentPage <= 1;
+    el.btnPrev.disabled = !hasDoc || onFirst;
+  }
+  if (el.btnNext) {
+    const onLast = state.twoPageMode ? state.currentPage >= state.pages.length - 1 : state.currentPage >= state.pages.length;
+    el.btnNext.disabled = !hasDoc || onLast;
   }
   if (el.zoomSelect) el.zoomSelect.disabled = !hasDoc;
   if (el.btnTwoPage) {
@@ -796,8 +976,17 @@ function updateControls() {
   if (el.pageIndicator) {
     if (!hasDoc) {
       el.pageIndicator.textContent = "— of —";
-    } else if (state.twoPageMode && state.currentPage < state.pages.length) {
-      el.pageIndicator.textContent = `& ${state.currentPage + 1} of ${state.pages.length}`;
+    } else if (state.twoPageMode && state.pages.length > 1) {
+      const p1 = state.currentPage % 2 === 0 ? state.currentPage - 1 : state.currentPage;
+      const p2 = p1 + 1;
+      if (p2 <= state.pages.length) {
+        if (el.pageJumpInput && document.activeElement !== el.pageJumpInput) {
+          el.pageJumpInput.value = String(p1);
+        }
+        el.pageIndicator.textContent = `– ${p2} of ${state.pages.length}`;
+      } else {
+        el.pageIndicator.textContent = `of ${state.pages.length}`;
+      }
     } else {
       el.pageIndicator.textContent = `of ${state.pages.length}`;
     }
@@ -807,7 +996,19 @@ function updateControls() {
 function updateZoomSelect() {
   const percent = Math.round(effectiveScale() * 100);
   const preset = ZOOM_PRESETS.find((p) => Math.abs(p - percent / 100) < 0.02);
-  el.zoomSelect.value = preset ? String(Math.round(preset * 100)) : "";
+  if (preset) {
+    el.zoomSelect.value = String(Math.round(preset * 100));
+  } else {
+    let opt = el.zoomSelect.querySelector('option[data-custom="1"]');
+    if (!opt) {
+      opt = document.createElement("option");
+      opt.dataset.custom = "1";
+      el.zoomSelect.appendChild(opt);
+    }
+    opt.value = String(percent);
+    opt.textContent = `${percent}%`;
+    el.zoomSelect.value = String(percent);
+  }
   el.zoomSelect.title = `${percent}%`;
 }
 
@@ -859,6 +1060,9 @@ function layoutPages() {
     }
     if (p.textDiv) {
       p.textDiv.textContent = "";
+    }
+    if (p.annotDiv) {
+      p.annotDiv.textContent = "";
     }
   }
   queueVisibleRender();
@@ -989,6 +1193,69 @@ async function renderPage(p) {
   if (key !== p.renderKey || !p.rendered) return;
 
   renderTextLayerForPage(p, key);
+  renderAnnotationLayerForPage(p, key);
+}
+
+async function renderAnnotationLayerForPage(p, key) {
+  if (!p.annotDiv) {
+    p.annotDiv = document.createElement("div");
+    p.annotDiv.className = "annotationLayer";
+    p.div.appendChild(p.annotDiv);
+  }
+  p.annotDiv.textContent = "";
+
+  const rot = (p.page.rotate + state.rotation) % 360;
+  const viewport = p.page.getViewport({ scale: p.scale, rotation: rot });
+
+  try {
+    const annotations = await p.page.getAnnotations({ intent: "display" });
+    if (key !== p.renderKey || !annotations || !annotations.length) return;
+
+    for (const item of annotations) {
+      if (item.subtype === "Link" && (item.url || item.dest)) {
+        if (!item.rect || item.rect.length < 4) continue;
+        const [x1, y1] = viewport.convertToViewportPoint(item.rect[0], item.rect[1]);
+        const [x2, y2] = viewport.convertToViewportPoint(item.rect[2], item.rect[3]);
+        const minX = Math.min(x1, x2);
+        const minY = Math.min(y1, y2);
+        const width = Math.abs(x1 - x2);
+        const height = Math.abs(y1 - y2);
+
+        const a = document.createElement("a");
+        a.className = "pdf-link-annotation";
+        a.style.left = `${Math.round(minX)}px`;
+        a.style.top = `${Math.round(minY)}px`;
+        a.style.width = `${Math.round(width)}px`;
+        a.style.height = `${Math.round(height)}px`;
+
+        if (item.url) {
+          a.href = item.url;
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.title = `${item.url} (Click to open in browser)`;
+          a.addEventListener("click", (e) => {
+            e.preventDefault();
+            window.open(item.url, "_blank");
+          });
+        } else if (item.dest) {
+          a.title = "Jump to linked section";
+          a.addEventListener("click", async (e) => {
+            e.preventDefault();
+            try {
+              const dest = typeof item.dest === "string" ? await state.doc.getDestination(item.dest) : item.dest;
+              if (Array.isArray(dest) && dest[0]) {
+                const pageIndex = typeof dest[0] === "number" ? dest[0] : await state.doc.getPageIndex(dest[0]);
+                if (pageIndex >= 0) scrollToPage(pageIndex);
+              }
+            } catch {}
+          });
+        }
+        p.annotDiv.appendChild(a);
+      }
+    }
+  } catch {
+    // annotations unavailable or cancelled
+  }
 }
 
 async function renderTextLayerForPage(p, key) {
@@ -1042,16 +1309,24 @@ function scrollToPage(index) {
 
 function prevPage() {
   if (!state.doc) return;
-  const step = state.twoPageMode ? 2 : 1;
-  const target = Math.max(0, state.currentPage - 1 - step);
-  if (state.currentPage > 1) scrollToPage(target);
+  if (state.twoPageMode) {
+    const currentSpreadStart = state.currentPage % 2 === 0 ? state.currentPage - 1 : state.currentPage;
+    const targetPage = Math.max(1, currentSpreadStart - 2);
+    if (currentSpreadStart > 1) scrollToPage(targetPage - 1);
+    return;
+  }
+  if (state.currentPage > 1) scrollToPage(state.currentPage - 2);
 }
 
 function nextPage() {
   if (!state.doc) return;
-  const step = state.twoPageMode ? 2 : 1;
-  const target = Math.min(state.pages.length - 1, state.currentPage - 1 + step);
-  if (state.currentPage < state.pages.length) scrollToPage(target);
+  if (state.twoPageMode) {
+    const currentSpreadStart = state.currentPage % 2 === 0 ? state.currentPage - 1 : state.currentPage;
+    const targetPage = currentSpreadStart + 2;
+    if (targetPage <= state.pages.length) scrollToPage(targetPage - 1);
+    return;
+  }
+  if (state.currentPage < state.pages.length) scrollToPage(state.currentPage);
 }
 
 function setFit(mode) {
@@ -1062,11 +1337,25 @@ function setFit(mode) {
 }
 
 function zoomIn() {
-  zoomBy(1.25);
+  if (!state.doc) return;
+  const cur = effectiveScale();
+  const next = ZOOM_PRESETS.find((p) => p > cur + 0.015);
+  state.zoom = next ? next : clamp(cur * 1.25, MIN_ZOOM, MAX_ZOOM);
+  state.layoutMode = "fixed";
+  layoutPages();
+  updateZoomSelect();
+  syncFitButtons();
 }
 
 function zoomOut() {
-  zoomBy(0.8);
+  if (!state.doc) return;
+  const cur = effectiveScale();
+  const prev = [...ZOOM_PRESETS].reverse().find((p) => p < cur - 0.015);
+  state.zoom = prev ? prev : clamp(cur * 0.8, MIN_ZOOM, MAX_ZOOM);
+  state.layoutMode = "fixed";
+  layoutPages();
+  updateZoomSelect();
+  syncFitButtons();
 }
 
 function zoomBy(factor) {
@@ -1227,8 +1516,15 @@ function renderOutlineItems(items, container, depth) {
         try {
           const dest = typeof item.dest === "string" ? await state.doc.getDestination(item.dest) : item.dest;
           if (Array.isArray(dest) && dest[0]) {
-            const pageIndex = await state.doc.getPageIndex(dest[0]);
-            scrollToPage(pageIndex);
+            let pageIndex = -1;
+            if (typeof dest[0] === "number") {
+              pageIndex = dest[0];
+            } else if (dest[0] && typeof dest[0] === "object") {
+              pageIndex = await state.doc.getPageIndex(dest[0]);
+            }
+            if (pageIndex >= 0) {
+              scrollToPage(pageIndex);
+            }
           }
         } catch {
           // destination could not be navigated
@@ -1394,7 +1690,9 @@ async function buildPages(doc) {
     canvas.className = "pdf-canvas";
     const textDiv = document.createElement("div");
     textDiv.className = "textLayer";
-    section.append(canvas, textDiv);
+    const annotDiv = document.createElement("div");
+    annotDiv.className = "annotationLayer";
+    section.append(canvas, textDiv, annotDiv);
     el.pageHost.appendChild(section);
     state.pages.push({
       n,
@@ -1403,6 +1701,7 @@ async function buildPages(doc) {
       div: section,
       canvas,
       textDiv,
+      annotDiv,
       textContent: null,
       scale: 1,
       width: vp1.width,
@@ -1421,6 +1720,9 @@ async function buildPages(doc) {
 async function destroyDocument() {
   toggleFindBar(false);
   for (const p of state.pages) {
+    if (p.annotDiv) {
+      p.annotDiv.textContent = "";
+    }
     if (p.prevTask) {
       try {
         p.prevTask.cancel();
@@ -1575,6 +1877,32 @@ function updateEditorChrome() {
 
   el.editorSaveLabel.textContent = saving ? "Saving…" : "Save as PDF";
   el.btnEditorSave.disabled = saving || !editorHasContent();
+
+  const currentTab = tabs.find((t) => t.id === activeTabId);
+  if (currentTab) {
+    currentTab.name = fileName;
+    if (currentTab.editor) {
+      currentTab.editor.fileName = fileName;
+      currentTab.editor.dirty = dirty;
+    }
+  }
+  const activeTabEl = el.tabsList ? el.tabsList.querySelector(`.chrome-tab[data-tab-id="${activeTabId}"]`) : null;
+  if (activeTabEl) {
+    const titleEl = activeTabEl.querySelector(".chrome-tab-title");
+    if (titleEl) titleEl.textContent = fileName || "New Tab";
+    activeTabEl.title = fileName;
+    let dirtyEl = activeTabEl.querySelector(".chrome-tab-dirty");
+    if (dirty && !dirtyEl) {
+      dirtyEl = document.createElement("span");
+      dirtyEl.className = "chrome-tab-dirty";
+      dirtyEl.title = "Unsaved changes";
+      const closeBtn = activeTabEl.querySelector(".chrome-tab-close");
+      if (closeBtn) activeTabEl.insertBefore(dirtyEl, closeBtn);
+      else activeTabEl.appendChild(dirtyEl);
+    } else if (!dirty && dirtyEl) {
+      dirtyEl.remove();
+    }
+  }
 }
 
 function defaultPdfOptions() {
@@ -1615,6 +1943,17 @@ function persistPdfOptions() {
   } catch {}
 }
 
+function applyEditorSheetLayout() {
+  if (!el.wordPageSheet || !state.editor.options) return;
+  const o = state.editor.options;
+  el.wordPageSheet.style.width = o.pageSize === "letter" ? "816px" : "794px";
+  const editable = el.editorContent ? el.editorContent.querySelector(".ql-editor") : null;
+  if (editable) {
+    const m = o.margin || 56;
+    editable.style.padding = `${m}px ${Math.round(m * 1.15)}px 80px`;
+  }
+}
+
 function syncOptionsToFields() {
   const o = state.editor.options;
   el.optPaperSize.value = o.pageSize === "letter" ? "letter" : "a4";
@@ -1624,6 +1963,7 @@ function syncOptionsToFields() {
   el.optPageNumbers.checked = !!o.pageNumbers;
   el.optAuthor.value = o.author || "";
   applyEditorFontSize();
+  applyEditorSheetLayout();
 }
 
 function syncOptionsFromFields() {
@@ -1635,6 +1975,7 @@ function syncOptionsFromFields() {
   o.pageNumbers = el.optPageNumbers.checked;
   o.title = el.optTitle.value.trim();
   o.author = el.optAuthor.value.trim();
+  applyEditorSheetLayout();
   persistPdfOptions();
 }
 
@@ -1644,14 +1985,14 @@ function toggleEditorOptions() {
   if (el.btnEditorOptions) el.btnEditorOptions.classList.toggle("active", show);
 }
 
-function openTextEditor({ html = "", text = "", fileName = "Document1", source = null } = {}) {
+function openTextEditor({ html = "", text = "", fileName = "Document1", source = null, options = null } = {}) {
   state.editor.active = true;
   state.editor.fileName = fileName;
   state.editor.dirty = false;
   state.editor.saving = false;
   state.editor.source = source;
-  state.editor.options = loadPdfOptions();
-  state.editor.options.title = "";
+  state.editor.options = options ? { ...options } : loadPdfOptions();
+  if (!state.editor.options.title) state.editor.options.title = "";
   hideAllOverlays();
   el.errorState.hidden = true;
   el.emptyState.hidden = true;
@@ -1695,6 +2036,10 @@ function newTextFile() {
 
 function exitEditor() {
   if (!state.editor.active) return true;
+  if (tabs.length > 1) {
+    closeTab(activeTabId);
+    return true;
+  }
   if (state.editor.dirty && !window.confirm("Discard changes? You have unsaved changes that will be lost.")) {
     return false;
   }
@@ -1708,6 +2053,7 @@ function exitEditor() {
   if (currentTab) {
     currentTab.type = "empty";
     currentTab.name = "New Tab";
+    currentTab.dirty = false;
   }
   showEmpty();
   renderTabBar();
@@ -1720,42 +2066,84 @@ function leaveEditor() {
 }
 
 async function savePdf() {
-  if (!state.editor.active) return;
-  if (!editorHasContent()) return;
-  const html = quill.getSemanticHTML();
-  syncOptionsFromFields();
-  const o = state.editor.options;
-  const options = {
-    pageSize: o.pageSize,
-    fontSize: o.fontSize,
-    lineSpacing: o.lineSpacing,
-    margin: o.margin,
-    pageNumbers: o.pageNumbers,
-    title: o.title || state.editor.fileName,
-    author: o.author || "PDFForge",
-  };
-  const prevName = state.editor.fileName;
-  state.editor.saving = true;
-  setEditorStatus("Creating PDF…");
-  updateEditorChrome();
-  try {
-    const res = await window.pdfViewer.createTextPdf({ text: html, rich: true, suggestedName: state.editor.fileName, options });
-    if (res && !res.canceled && res.filePath) {
-      const base = String(res.filePath).split(/[\\/]/).pop().replace(/\.pdf$/i, "") || state.editor.fileName;
-      state.editor.fileName = base;
-      state.editor.dirty = false;
-      if (!el.optTitle.value.trim() || el.optTitle.value.trim() === prevName) {
-        el.optTitle.value = base;
-      }
-      setEditorStatus(`Saved ${base}.pdf`);
-    } else {
-      setEditorStatus("Save canceled");
+  if (state.editor.active) {
+    if (!editorHasContent()) {
+      showToast("Cannot save an empty document. Please enter some text first.", "info");
+      return;
     }
-  } catch (err) {
-    setEditorStatus(`Save failed — ${err && err.message ? err.message : "unknown error"}`);
-  } finally {
-    state.editor.saving = false;
+    const html = quill.getSemanticHTML();
+    syncOptionsFromFields();
+    const o = state.editor.options;
+    const options = {
+      pageSize: o.pageSize,
+      fontSize: o.fontSize,
+      lineSpacing: o.lineSpacing,
+      margin: o.margin,
+      pageNumbers: o.pageNumbers,
+      title: o.title || state.editor.fileName,
+      author: o.author || "PDFForge",
+    };
+    const prevName = state.editor.fileName;
+    state.editor.saving = true;
+    setEditorStatus("Creating PDF…");
     updateEditorChrome();
+    try {
+      const res = await window.pdfViewer.createTextPdf({ text: html, rich: true, suggestedName: state.editor.fileName, options });
+      if (res && !res.canceled && res.filePath) {
+        const base = String(res.filePath).split(/[\\/]/).pop().replace(/\.pdf$/i, "") || state.editor.fileName;
+        state.editor.fileName = base;
+        state.editor.dirty = false;
+        if (!el.optTitle.value.trim() || el.optTitle.value.trim() === prevName) {
+          el.optTitle.value = base;
+        }
+        setEditorStatus(`Saved ${base}.pdf`);
+        showToast(`Saved ${base}.pdf`, "success");
+        const currentTab = tabs.find((t) => t.id === activeTabId);
+        if (currentTab) {
+          currentTab.name = base;
+          currentTab.filePath = res.filePath;
+          currentTab.dirty = false;
+        }
+        saveRecentFile(base + ".pdf", res.filePath);
+        renderTabBar();
+      } else {
+        setEditorStatus("Save canceled");
+      }
+    } catch (err) {
+      setEditorStatus(`Save failed — ${err && err.message ? err.message : "unknown error"}`);
+      showToast(`Save failed: ${err && err.message ? err.message : "unknown error"}`, "error");
+    } finally {
+      state.editor.saving = false;
+      updateEditorChrome();
+    }
+    return;
+  }
+
+  // Active PDF Viewer mode
+  if (state.doc && state.data) {
+    try {
+      const defaultName = (state.name || "document").replace(/\.pdf$/i, "");
+      const res = await window.pdfViewer.savePdf({ data: state.data, defaultName });
+      if (res && !res.canceled && res.filePath) {
+        state.filePath = res.filePath;
+        state.name = res.name || `${defaultName}.pdf`;
+        state.pdfModified = false;
+        el.docName.textContent = state.name;
+        el.docName.title = `${state.name} (${state.filePath})`;
+        document.title = `${state.name} — PDFForge Viewer`;
+        const currentTab = tabs.find((t) => t.id === activeTabId);
+        if (currentTab) {
+          currentTab.name = state.name;
+          currentTab.filePath = state.filePath;
+          currentTab.dirty = false;
+        }
+        saveRecentFile(state.name, state.filePath);
+        renderTabBar();
+        showToast(`Saved ${state.name}`, "success");
+      }
+    } catch (err) {
+      showToast(`Save failed: ${err && err.message ? err.message : "unknown error"}`, "error");
+    }
   }
 }
 
@@ -1769,11 +2157,11 @@ function getRecentFiles() {
 }
 
 function saveRecentFile(name, filePath) {
-  if (!name) return;
+  if (!name || !filePath) return;
   try {
     let list = getRecentFiles();
-    list = list.filter((item) => item.path !== filePath && item.name !== name);
-    list.unshift({ name, path: filePath || "", time: Date.now() });
+    list = list.filter((item) => item.path !== filePath);
+    list.unshift({ name, path: filePath, time: Date.now() });
     if (list.length > 5) list = list.slice(0, 5);
     localStorage.setItem(RECENT_KEY, JSON.stringify(list));
     renderRecentFiles();
@@ -1915,6 +2303,13 @@ function showShortcutsModal() {
   el.shortcutsModal.hidden = false;
 }
 
+function formatFileSize(bytes) {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "—";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
 async function showPropertiesModal() {
   if (!state.doc) return;
   hideAllOverlays();
@@ -1930,6 +2325,7 @@ async function showPropertiesModal() {
     const rows = [
       ["File Name", state.name || "—"],
       ["File Location", state.filePath || "Local Session"],
+      ["File Size", state.data ? formatFileSize(state.data.byteLength) : "—"],
       ["Page Count", `${state.pages.length} pages`],
       ["Page Dimensions", dims],
       ["Title", info.Title || "—"],
@@ -1957,6 +2353,21 @@ async function openFromDialog() {
 }
 
 async function printDocument() {
+  if (state.editor.active && quill) {
+    el.printHost.textContent = "";
+    const sheet = document.createElement("section");
+    sheet.className = "print-sheet print-editor-sheet";
+    sheet.innerHTML = quill.root ? quill.root.innerHTML : "";
+    el.printHost.appendChild(sheet);
+    const cleanup = () => {
+      el.printHost.textContent = "";
+      window.removeEventListener("afterprint", cleanup);
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+    setTimeout(cleanup, 1500);
+    return;
+  }
   if (!state.doc) return;
   el.printHost.textContent = "";
   const maxW = 2000;
@@ -2012,7 +2423,7 @@ function debounceSearch(query) {
 }
 
 function toggleFindBar(force) {
-  if (!state.doc && force) return;
+  if (!state.doc && !state.editor.active && force) return;
   const show = typeof force === "boolean" ? force : el.findBar.hidden;
   state.search.isOpen = show;
   el.findBar.hidden = !show;
@@ -2029,7 +2440,11 @@ function toggleFindBar(force) {
     state.search.matches = [];
     state.search.currentMatchIndex = -1;
     el.findResults.textContent = "";
-    el.pageHost.focus();
+    if (state.editor.active && quill) {
+      quill.focus();
+    } else if (el.pageHost) {
+      el.pageHost.focus();
+    }
   }
 }
 
@@ -2038,6 +2453,11 @@ async function executeSearch(query) {
   state.search.query = query;
   state.search.matches = [];
   state.search.currentMatchIndex = -1;
+
+  if (state.editor.active) {
+    executeEditorSearch(query);
+    return;
+  }
 
   if (!query || !state.doc) {
     el.findResults.textContent = "";
@@ -2086,6 +2506,40 @@ async function executeSearch(query) {
   goToMatch(targetIndex);
 }
 
+function executeEditorSearch(query) {
+  if (!query || !quill) {
+    el.findResults.textContent = "";
+    return;
+  }
+  const text = quill.getText();
+  const lowerText = text.toLowerCase();
+  const lowerQuery = query.toLowerCase();
+  const allMatches = [];
+  let pos = 0;
+  while ((pos = lowerText.indexOf(lowerQuery, pos)) !== -1) {
+    allMatches.push({ index: pos, length: query.length });
+    pos += lowerQuery.length;
+  }
+  state.search.matches = allMatches;
+  if (allMatches.length === 0) {
+    el.findResults.textContent = "0 of 0";
+    return;
+  }
+  const sel = quill.getSelection() || { index: 0 };
+  let targetIndex = allMatches.findIndex((m) => m.index >= sel.index);
+  if (targetIndex < 0) targetIndex = 0;
+  goToEditorMatch(targetIndex);
+}
+
+function goToEditorMatch(index) {
+  if (!state.search.matches.length || !quill) return;
+  state.search.currentMatchIndex = (index + state.search.matches.length) % state.search.matches.length;
+  const current = state.search.matches[state.search.currentMatchIndex];
+  el.findResults.textContent = `${state.search.currentMatchIndex + 1} of ${state.search.matches.length}`;
+  quill.setSelection(current.index, current.length, "user");
+  quill.scrollIntoView();
+}
+
 function goToMatch(index) {
   if (!state.search.matches.length) return;
   state.search.currentMatchIndex = (index + state.search.matches.length) % state.search.matches.length;
@@ -2114,7 +2568,11 @@ function findNext() {
     if (el.findInput.value) executeSearch(el.findInput.value);
     return;
   }
-  goToMatch(state.search.currentMatchIndex + 1);
+  if (state.editor.active) {
+    goToEditorMatch(state.search.currentMatchIndex + 1);
+  } else {
+    goToMatch(state.search.currentMatchIndex + 1);
+  }
 }
 
 function findPrev() {
@@ -2122,7 +2580,11 @@ function findPrev() {
     if (el.findInput.value) executeSearch(el.findInput.value);
     return;
   }
-  goToMatch(state.search.currentMatchIndex - 1);
+  if (state.editor.active) {
+    goToEditorMatch(state.search.currentMatchIndex - 1);
+  } else {
+    goToMatch(state.search.currentMatchIndex - 1);
+  }
 }
 
 function highlightPage(p) {
@@ -2219,11 +2681,60 @@ function bindEvents() {
     if (el.addPageMenu && !e.target.closest(".dropdown-wrapper")) {
       el.addPageMenu.hidden = true;
     }
+    if (el.tabContextMenu && !e.target.closest("#tab-context-menu")) {
+      hideTabContextMenu();
+    }
   });
+
+  if (el.ctxCloseTab) {
+    el.ctxCloseTab.addEventListener("click", () => {
+      if (contextMenuTargetTabId) closeTab(contextMenuTargetTabId);
+      hideTabContextMenu();
+    });
+  }
+  if (el.ctxCloseOthers) {
+    el.ctxCloseOthers.addEventListener("click", () => {
+      if (contextMenuTargetTabId) closeOtherTabs(contextMenuTargetTabId);
+    });
+  }
+  if (el.ctxCloseRight) {
+    el.ctxCloseRight.addEventListener("click", () => {
+      if (contextMenuTargetTabId) closeTabsToRight(contextMenuTargetTabId);
+    });
+  }
+  if (el.ctxDuplicateTab) {
+    el.ctxDuplicateTab.addEventListener("click", () => {
+      if (contextMenuTargetTabId) duplicateTab(contextMenuTargetTabId);
+    });
+  }
+  if (el.ctxNewTab) {
+    el.ctxNewTab.addEventListener("click", () => {
+      hideTabContextMenu();
+      createNewTab();
+    });
+  }
+
   setupSplitDivider();
+
+  if (el.tabsList) {
+    el.tabsList.addEventListener("wheel", (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.tabsList.scrollLeft += e.deltaY;
+      }
+    }, { passive: false });
+  }
+  if (el.tabBar) {
+    el.tabBar.addEventListener("dblclick", (e) => {
+      if (e.target === el.tabBar || e.target === el.tabsList || e.target.classList.contains("chrome-tab-spacer")) {
+        createNewTab();
+      }
+    });
+  }
 
   if (el.btnNew) el.btnNew.addEventListener("click", newTextFile);
   el.btnOpen.addEventListener("click", openFromDialog);
+  if (el.btnSave) el.btnSave.addEventListener("click", savePdf);
   el.btnOpenEmpty.addEventListener("click", openFromDialog);
   if (el.btnNewEmpty) el.btnNewEmpty.addEventListener("click", newTextFile);
   el.btnErrorOpen.addEventListener("click", openFromDialog);
@@ -2236,6 +2747,21 @@ function bindEvents() {
   if (el.btnPropertiesClose) el.btnPropertiesClose.addEventListener("click", hideAllOverlays);
   if (el.btnShortcutsClose) el.btnShortcutsClose.addEventListener("click", hideAllOverlays);
 
+  [el.propertiesModal, el.shortcutsModal, el.passwordModal].forEach((overlay) => {
+    if (overlay) {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) {
+          if (overlay === el.passwordModal) {
+            hidePasswordModal();
+            showError(new Error("This PDF requires a password. It was not opened."));
+          } else {
+            hideAllOverlays();
+          }
+        }
+      });
+    }
+  });
+
   if (el.tabThumbs) el.tabThumbs.addEventListener("click", () => switchSidebarTab("thumbs"));
   if (el.tabOutline) el.tabOutline.addEventListener("click", () => switchSidebarTab("outline"));
 
@@ -2247,8 +2773,14 @@ function bindEvents() {
     el.findInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        if (e.shiftKey) findPrev();
-        else findNext();
+        clearTimeout(searchDebounceTimer);
+        const query = el.findInput.value.trim();
+        if (query !== state.search.query) {
+          executeSearch(query);
+        } else {
+          if (e.shiftKey) findPrev();
+          else findNext();
+        }
       } else if (e.key === "Escape") {
         e.preventDefault();
         toggleFindBar(false);
@@ -2329,24 +2861,28 @@ function bindEvents() {
   }
 
   if (el.pageJumpInput) {
+    const handleJump = () => {
+      const val = parseInt(el.pageJumpInput.value, 10);
+      if (Number.isInteger(val) && val >= 1 && val <= state.pages.length) {
+        if (val !== state.currentPage) {
+          scrollToPage(val - 1);
+        }
+      } else {
+        el.pageJumpInput.value = String(state.currentPage);
+      }
+    };
+    el.pageJumpInput.addEventListener("focus", () => el.pageJumpInput.select());
     el.pageJumpInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
-        const val = parseInt(el.pageJumpInput.value, 10);
-        if (Number.isInteger(val) && val >= 1 && val <= state.pages.length) {
-          scrollToPage(val - 1);
-        } else {
-          el.pageJumpInput.value = String(state.currentPage);
-        }
+        handleJump();
         el.pageHost.focus();
       } else if (e.key === "Escape") {
         el.pageJumpInput.value = String(state.currentPage);
         el.pageHost.focus();
       }
     });
-    el.pageJumpInput.addEventListener("blur", () => {
-      el.pageJumpInput.value = String(state.currentPage);
-    });
+    el.pageJumpInput.addEventListener("blur", handleJump);
   }
 
   el.zoomSelect.addEventListener("change", () => {
@@ -2410,8 +2946,13 @@ function bindEvents() {
     (e) => {
       if (e.ctrlKey || e.metaKey) {
         e.preventDefault();
-        if (e.deltaY < 0) zoomIn();
-        else if (e.deltaY > 0) zoomOut();
+        if (state.editor.active) {
+          if (e.deltaY < 0) zoomDocIn();
+          else if (e.deltaY > 0) zoomDocOut();
+        } else {
+          if (e.deltaY < 0) zoomIn();
+          else if (e.deltaY > 0) zoomOut();
+        }
       }
     },
     { passive: false }
@@ -2420,7 +2961,7 @@ function bindEvents() {
   window.addEventListener("dragenter", (e) => {
     e.preventDefault();
     dragDepth++;
-    if (!state.doc && dragDepth > 0) el.dropOverlay.hidden = false;
+    if (dragDepth > 0 && el.dropOverlay) el.dropOverlay.hidden = false;
   });
   window.addEventListener("dragover", (e) => e.preventDefault());
   window.addEventListener("dragleave", (e) => {
@@ -2434,7 +2975,11 @@ function bindEvents() {
     el.dropOverlay.hidden = true;
     const dropped = Array.from(e.dataTransfer?.files || []).filter((f) => /\.pdf$/i.test(f.name));
     if (!dropped.length) {
-      showError(new Error("Only PDF files can be opened."));
+      if (state.doc || state.editor.active) {
+        showToast("Only PDF files can be opened", "error");
+      } else {
+        showError(new Error("Only PDF files can be opened."));
+      }
       return;
     }
     const filesToOpen = [];
@@ -2506,26 +3051,42 @@ function bindEvents() {
         return;
       }
       if (k === "d") {
+        if (state.editor.active) return;
         e.preventDefault();
         showPropertiesModal();
         return;
       }
       if (k === "=" || k === "+" || key === "Add") {
         e.preventDefault();
-        zoomIn();
+        if (state.editor.active) zoomDocIn();
+        else zoomIn();
         return;
       }
       if (k === "-" || key === "Subtract") {
         e.preventDefault();
-        zoomOut();
+        if (state.editor.active) zoomDocOut();
+        else zoomOut();
         return;
       }
       if (k === "0") {
         e.preventDefault();
-        actualSize();
+        if (state.editor.active) {
+          docZoomScale = 1.0;
+          updateDocZoom();
+        } else {
+          actualSize();
+        }
         return;
       }
       if (k === "r") {
+        if (state.editor.active) {
+          if (quill) {
+            e.preventDefault();
+            const format = quill.getFormat();
+            quill.format("align", format.align === "right" ? false : "right");
+          }
+          return;
+        }
         e.preventDefault();
         rotateClockwise();
         return;
@@ -2537,6 +3098,11 @@ function bindEvents() {
       }
     }
     if (key === "Escape") {
+      if (el.tabContextMenu && !el.tabContextMenu.hidden) {
+        e.preventDefault();
+        hideTabContextMenu();
+        return;
+      }
       if (state.search.isOpen) {
         e.preventDefault();
         toggleFindBar(false);
@@ -2550,7 +3116,8 @@ function bindEvents() {
     }
     if (key === "?" || key === "F1") {
       const tag = e.target && e.target.tagName;
-      if (tag !== "INPUT" && tag !== "SELECT" && tag !== "TEXTAREA") {
+      const isEditable = e.target && (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || e.target.isContentEditable);
+      if (!isEditable) {
         e.preventDefault();
         showShortcutsModal();
         return;
@@ -2558,7 +3125,7 @@ function bindEvents() {
     }
     if (!state.doc) return;
     const tag = e.target && e.target.tagName;
-    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA") return;
+    if (tag === "INPUT" || tag === "SELECT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
     switch (key) {
       case "ArrowLeft":
         e.preventDefault();

@@ -482,6 +482,22 @@ if (!gotLock) {
       return { canceled: false, filePath: result.filePath };
     });
 
+    ipcMain.handle("dialog:save-pdf", async (_event, payload) => {
+      const data = payload?.data;
+      if (!data) return { canceled: true, error: "No data provided" };
+      const defaultName = typeof payload?.defaultName === "string" && payload.defaultName.trim()
+        ? payload.defaultName.trim().replace(/\.pdf$/i, "")
+        : "document";
+      const result = await dialog.showSaveDialog(mainWindow, {
+        title: "Save PDF",
+        defaultPath: `${defaultName}.pdf`,
+        filters: [{ name: "PDF documents", extensions: ["pdf"] }],
+      });
+      if (result.canceled || !result.filePath) return { canceled: true };
+      await fs.writeFile(result.filePath, Buffer.from(data));
+      return { canceled: false, filePath: result.filePath, name: path.basename(result.filePath) };
+    });
+
     ipcMain.handle("app:set-theme", (_event, theme) => {
       if (theme === "light" || theme === "dark" || theme === "system") nativeTheme.themeSource = theme;
     });
