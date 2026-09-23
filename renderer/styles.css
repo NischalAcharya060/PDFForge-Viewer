@@ -867,6 +867,10 @@ kbd {
   overflow: visible;
   color: var(--text);
   font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  float: none;
+  height: 28px;
 }
 
 .word-ribbon.ql-toolbar.ql-snow .ql-picker-label {
@@ -876,6 +880,7 @@ kbd {
   background: var(--field);
   padding: 0 6px;
   height: 28px;
+  box-sizing: border-box;
   display: inline-flex;
   align-items: center;
   outline: none;
@@ -1147,7 +1152,7 @@ kbd {
 }
 
 /* Ribbon Buttons & Pickers */
-.ribbon-icon-btn,
+.word-ribbon.ql-toolbar.ql-snow .ribbon-icon-btn,
 .word-ribbon button.ql-bold,
 .word-ribbon button.ql-italic,
 .word-ribbon button.ql-underline,
@@ -1192,11 +1197,13 @@ kbd {
   color: var(--accent);
 }
 
+.word-ribbon.ql-toolbar.ql-snow .ribbon-feature-btn,
 .ribbon-feature-btn {
   display: inline-flex;
   align-items: center;
   gap: 5px;
   height: 28px;
+  width: auto;
   padding: 0 10px;
   border-radius: 6px;
   border: 1px solid var(--field-border);
