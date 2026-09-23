@@ -1,0 +1,67 @@
+{
+  "name": "pdfforge-viewer",
+  "version": "1.1.0",
+  "description": "A fast, private, offline desktop PDF viewer.",
+  "main": "electron/main.js",
+  "author": "PDFForge",
+  "license": "MIT",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron .",
+    "smoke": "electron . --smoke",
+    "dist": "electron-builder --win nsis",
+    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/rich-to-pdf.js && node --check renderer/viewer.js",
+    "test:rich": "node scripts/rich-smoke.js"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.3.289",
+    "quill": "^2.0.3"
+  },
+  "devDependencies": {
+    "electron": "^44.4.3",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.pdfforge.viewer",
+    "productName": "PDFForge Viewer",
+    "asar": true,
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "electron/**/*",
+      "renderer/**/*",
+      "node_modules/pdfjs-dist/build/**/*",
+      "node_modules/pdfjs-dist/web/**/*",
+      "node_modules/pdf-lib/**/*",
+      "node_modules/quill/dist/**/*",
+      "!node_modules/pdfjs-dist/**/*.map",
+      "!node_modules/pdf-lib/**/*.map",
+      "!node_modules/quill/**/*.map",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/brand-icon.png",
+      "fileAssociations": [
+        {
+          "ext": "pdf",
+          "name": "PDFForge Viewer",
+          "description": "PDFForge Viewer document",
+          "role": "Viewer"
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

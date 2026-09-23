@@ -1,0 +1,680 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; worker-src 'self' blob:; connect-src 'self'"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23e5484d'/%3E%3Cpath d='M6 9V4h8l3 3v13H6V9z' fill='%23fff'/%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./quill/quill.snow.css" />
+    <title>PDFForge Viewer</title>
+  </head>
+  <body>
+    <!-- Chrome-Style Tab Bar -->
+    <div id="tab-bar" class="chrome-tab-bar" role="tablist">
+      <div id="tabs-list" class="chrome-tabs-list">
+        <!-- Tabs generated dynamically -->
+      </div>
+      <button id="btn-new-tab" class="chrome-tab-add-btn" title="New tab (Ctrl+T)" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19" />
+          <line x1="5" y1="12" x2="19" y2="12" />
+        </svg>
+      </button>
+      <div class="chrome-tab-spacer"></div>
+      <div class="chrome-tab-actions">
+        <button id="btn-split-view" class="icon-btn-compact" title="Toggle Split View / Side-by-Side Documents (Ctrl+Alt+S)" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="12" y1="3" x2="12" y2="21" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <header id="toolbar">
+      <div class="toolbar-group left">
+        <div class="app-brand" title="PDFForge Desktop Viewer">
+          <svg viewBox="0 0 24 24" fill="none" class="brand-icon">
+            <rect width="24" height="24" rx="6" fill="#e5484d" />
+            <path d="M7 6h6l4 4v8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="#fff" opacity="0.95" />
+            <path d="M13 6v4h4" fill="#e5484d" opacity="0.4" />
+            <text x="8" y="16" font-size="6" font-weight="900" fill="#e5484d" font-family="system-ui">PDF</text>
+          </svg>
+        </div>
+        <button id="btn-new" class="icon-btn" title="New document (Ctrl+N)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M12 18v-6" />
+            <path d="M9 15h6" />
+          </svg>
+        </button>
+        <button id="btn-open" class="icon-btn" title="Open PDF (Ctrl+O)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+            <path d="M3 9h18" />
+          </svg>
+        </button>
+        <div class="dropdown-wrapper">
+          <button id="btn-add-page" class="icon-btn" title="Add page or merge PDF" disabled>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <path d="M14 2v6h6" />
+              <line x1="12" y1="11" x2="12" y2="17" />
+              <line x1="9" y1="14" x2="15" y2="14" />
+            </svg>
+          </button>
+          <div id="add-page-menu" class="dropdown-menu" hidden>
+            <button id="btn-add-blank-page" class="dropdown-item" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="5" y="3" width="14" height="18" rx="2" />
+                <line x1="12" y1="9" x2="12" y2="15" />
+                <line x1="9" y1="12" x2="15" y2="12" />
+              </svg>
+              <span>Add Blank Page</span>
+            </button>
+            <button id="btn-append-pdf-pages" class="dropdown-item" type="button">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+              <span>Insert Pages from PDF…</span>
+            </button>
+          </div>
+        </div>
+        <button id="btn-print" class="icon-btn" title="Print (Ctrl+P)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 9V3h12v6" />
+            <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+            <rect x="6" y="14" width="12" height="7" rx="1" />
+          </svg>
+        </button>
+        <button id="btn-find" class="icon-btn" title="Find in document (Ctrl+F)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16" y2="16" />
+          </svg>
+        </button>
+        <button id="btn-info" class="icon-btn" title="Document properties (Ctrl+D)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+        </button>
+        <span class="toolbar-sep"></span>
+        <span id="doc-name" title="No document opened">PDFForge Viewer</span>
+      </div>
+
+      <div class="toolbar-group center">
+        <button id="btn-prev" class="icon-btn" title="Previous page (←)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M15 18l-6-6 6-6" />
+          </svg>
+        </button>
+        <div class="page-nav-box" title="Page navigation">
+          <input type="number" id="page-jump-input" min="1" value="1" title="Type page number and press Enter" disabled />
+          <span id="page-indicator">— of —</span>
+        </div>
+        <button id="btn-next" class="icon-btn" title="Next page (→)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="toolbar-group right">
+        <button id="btn-fit-width" class="icon-btn" title="Fit to width" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 8l-5 4 5 4" />
+            <path d="M15 8l5 4-5 4" />
+          </svg>
+        </button>
+        <button id="btn-fit-page" class="icon-btn" title="Fit to page" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 9V4h5" />
+            <path d="M20 9V4h-5" />
+            <path d="M4 15v5h5" />
+            <path d="M20 15v5h-5" />
+          </svg>
+        </button>
+        <button id="btn-two-page" class="icon-btn" title="Two pages side-by-side (Ctrl+Alt+2)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="9" height="16" rx="1.5" />
+            <rect x="13" y="4" width="9" height="16" rx="1.5" />
+          </svg>
+        </button>
+        <button id="btn-zoom-out" class="icon-btn" title="Zoom out (Ctrl+-)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M8 11h6" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg>
+        </button>
+        <select id="zoom-select" aria-label="Zoom level" title="Zoom level" disabled></select>
+        <button id="btn-zoom-in" class="icon-btn" title="Zoom in (Ctrl++)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="11" cy="11" r="7" />
+            <path d="M8 11h6" />
+            <path d="M11 8v6" />
+            <path d="M21 21l-4.3-4.3" />
+          </svg>
+        </button>
+        <button id="btn-rotate" class="icon-btn" title="Rotate clockwise (Ctrl+R)" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8" />
+            <path d="M21 3v5h-5" />
+          </svg>
+        </button>
+        <span class="toolbar-sep"></span>
+        <button id="btn-thumbs" class="icon-btn" title="Toggle sidebar (T)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
+            <rect x="3" y="3" width="7" height="7" rx="1.5" />
+            <rect x="14" y="3" width="7" height="7" rx="1.5" />
+            <rect x="3" y="14" width="7" height="7" rx="1.5" />
+            <rect x="14" y="14" width="7" height="7" rx="1.5" />
+          </svg>
+        </button>
+        <button id="btn-shortcuts" class="icon-btn" title="Keyboard shortcuts (?)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3" />
+            <line x1="12" y1="17" x2="12.01" y2="17" />
+          </svg>
+        </button>
+        <button id="btn-theme" class="icon-btn" title="Toggle dark mode (D)">
+          <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <circle cx="12" cy="12" r="4" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+          </svg>
+          <svg class="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" />
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <div id="viewport">
+      <aside id="thumbnails" hidden>
+        <div class="sidebar-tabs">
+          <button id="tab-thumbs" class="sidebar-tab active" title="Thumbnails">Pages</button>
+          <button id="tab-outline" class="sidebar-tab" title="Document bookmarks">Outline</button>
+        </div>
+        <div id="thumb-list" class="sidebar-panel"></div>
+        <div id="outline-list" class="sidebar-panel" hidden>
+          <div class="empty-outline">No outline in this document</div>
+        </div>
+      </aside>
+      <div id="workspace-container" class="workspace-container">
+        <div id="primary-pane" class="workspace-pane">
+          <main id="page-host" tabindex="0"></main>
+        </div>
+        <div id="split-divider" class="split-divider" hidden></div>
+        <div id="secondary-pane" class="workspace-pane" hidden>
+          <div class="secondary-pane-bar">
+            <span id="secondary-pane-title">Second Document</span>
+            <button id="btn-close-split" class="icon-btn-compact" title="Close Split View" type="button">&times;</button>
+          </div>
+          <main id="secondary-page-host" tabindex="0"></main>
+        </div>
+      </div>
+    </div>
+
+    <div id="empty-state">
+      <div class="empty-card">
+        <div class="empty-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M16 13H8" />
+            <path d="M16 17H8" />
+            <path d="M10 9H8" />
+          </svg>
+        </div>
+        <h1>PDFForge Viewer</h1>
+        <p class="empty-subtitle">Fast, offline &amp; private desktop PDF reader</p>
+        <div class="empty-actions">
+          <button id="btn-open-empty" class="primary-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+              <path d="M3 9h18" />
+            </svg>
+            Open PDF Document
+          </button>
+          <button id="btn-new-empty" class="feature-btn">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <path d="M14 2v6h6" />
+              <path d="M12 18v-6" />
+              <path d="M9 15h6" />
+            </svg>
+            New Document
+          </button>
+        </div>
+        <p class="empty-hint">or drop a PDF anywhere in this window</p>
+        
+        <div id="recent-container" hidden>
+          <div class="recent-header">
+            <span>Recent Files</span>
+            <button id="btn-clear-recent" class="text-link-btn">Clear</button>
+          </div>
+          <div id="recent-list"></div>
+        </div>
+
+        <div class="empty-shortcuts">
+          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>N</kbd> New Document</span>
+          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>S</kbd> Save Document as PDF</span>
+          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>O</kbd> Open</span>
+          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>F</kbd> Find</span>
+          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>P</kbd> Print</span>
+          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>R</kbd> Rotate</span>
+          <span class="shortcut-chip"><kbd>?</kbd> Help</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="error-state" hidden>
+      <div class="error-card">
+        <div class="error-icon-wrap">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <h1 id="error-title">Couldn't open this file</h1>
+        <p id="error-message"></p>
+        <div class="error-actions">
+          <button id="btn-error-open" class="primary-btn">Open another PDF</button>
+          <button id="btn-error-dismiss" class="plain-btn">Dismiss</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="editor-view" hidden>
+      <!-- Editor Header / Title Bar in Default App UI Style -->
+      <div id="editor-toolbar">
+        <div class="editor-file-info">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="editor-file-icon">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+            <path d="M14 2v6h6" />
+            <path d="M16 13H8" />
+            <path d="M16 17H8" />
+            <path d="M10 9H8" />
+          </svg>
+          <div class="editor-file-meta">
+            <div class="editor-title-row">
+              <input type="text" id="editor-name-input" class="editor-title-input" value="Document1" title="Click to rename document" spellcheck="false" />
+              <span id="editor-name" style="display: none;">untitled</span>
+              <span id="editor-save-state" class="editor-badge-saved">Saved</span>
+            </div>
+            <span id="editor-subtitle">Rich Document Editor — Word features enabled</span>
+          </div>
+        </div>
+        <div class="editor-actions">
+          <span id="editor-status"></span>
+          <button id="btn-editor-options" class="plain-btn" title="Paper size, margins, and PDF setup">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M3 9h18M9 21V9" />
+            </svg>
+            <span>Layout</span>
+          </button>
+          <button id="btn-editor-close" class="plain-btn" title="Close document">Close</button>
+          <button id="btn-editor-save" class="primary-btn" title="Save as PDF (Ctrl+S)">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+              <polyline points="17 21 17 13 7 13 7 21" />
+              <polyline points="7 3 7 8 15 8" />
+            </svg>
+            <span id="editor-save-label">Save as PDF</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Word Layout Setup Drawer -->
+      <div id="editor-options" hidden>
+        <label class="opt-field">
+          <span>Paper size</span>
+          <select id="opt-paper-size">
+            <option value="a4" selected>A4 (210 × 297 mm)</option>
+            <option value="letter">Letter (8.5 × 11 in)</option>
+          </select>
+        </label>
+        <label class="opt-field">
+          <span>Base Font size</span>
+          <select id="opt-font-size">
+            <option value="10">10 pt</option>
+            <option value="11" selected>11 pt (Word default)</option>
+            <option value="12">12 pt</option>
+            <option value="14">14 pt</option>
+            <option value="16">16 pt</option>
+          </select>
+        </label>
+        <label class="opt-field">
+          <span>Line spacing</span>
+          <select id="opt-line-spacing">
+            <option value="1.0">1.0 Single</option>
+            <option value="1.15" selected>1.15 Normal</option>
+            <option value="1.5">1.5 Relaxed</option>
+            <option value="2.0">2.0 Double</option>
+          </select>
+        </label>
+        <label class="opt-field">
+          <span>Margins</span>
+          <select id="opt-margin">
+            <option value="36">Narrow (0.5 in)</option>
+            <option value="56" selected>Normal (1.0 in)</option>
+            <option value="72">Wide (1.25 in)</option>
+          </select>
+        </label>
+        <label class="opt-field opt-check">
+          <input type="checkbox" id="opt-page-numbers" checked />
+          <span>Page numbers</span>
+        </label>
+        <label class="opt-field opt-grow">
+          <span>Document Title</span>
+          <input type="text" id="opt-title" placeholder="Document title in metadata" />
+        </label>
+        <label class="opt-field opt-grow">
+          <span>Author</span>
+          <input type="text" id="opt-author" placeholder="PDFForge" />
+        </label>
+      </div>
+
+      <!-- Microsoft Word Ribbon Toolbar -->
+      <div id="quill-toolbar" class="word-ribbon">
+        <!-- History / Undo Group -->
+        <div class="ribbon-group" title="Undo & Clipboard">
+          <div class="ribbon-row">
+            <button id="btn-ribbon-undo" class="ribbon-icon-btn" type="button" title="Undo (Ctrl+Z)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 7v6h6" />
+                <path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" />
+              </svg>
+            </button>
+            <button id="btn-ribbon-redo" class="ribbon-icon-btn" type="button" title="Redo (Ctrl+Y)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 7v6h-6" />
+                <path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13" />
+              </svg>
+            </button>
+            <button class="ql-clean ribbon-icon-btn" title="Clear Formatting (Ctrl+\)"></button>
+          </div>
+          <span class="ribbon-label">Undo</span>
+        </div>
+
+        <div class="ribbon-sep"></div>
+
+        <!-- Typography / Font Group -->
+        <div class="ribbon-group font-group" title="Font & Typography">
+          <div class="ribbon-row">
+            <select class="ql-font word-select-font" title="Font Family">
+              <option selected value="">Calibri</option>
+              <option value="arial">Arial</option>
+              <option value="times-new-roman">Times New Roman</option>
+              <option value="georgia">Georgia</option>
+              <option value="courier">Courier New</option>
+              <option value="segoe">Segoe UI</option>
+            </select>
+            <select class="ql-size word-select-size" title="Font Size">
+              <option value="9pt">9</option>
+              <option value="10pt">10</option>
+              <option value="11pt" selected>11</option>
+              <option value="12pt">12</option>
+              <option value="14pt">14</option>
+              <option value="16pt">16</option>
+              <option value="18pt">18</option>
+              <option value="20pt">20</option>
+              <option value="24pt">24</option>
+              <option value="28pt">28</option>
+              <option value="36pt">36</option>
+              <option value="48pt">48</option>
+            </select>
+          </div>
+          <div class="ribbon-row">
+            <button class="ql-bold ribbon-icon-btn" title="Bold (Ctrl+B)"></button>
+            <button class="ql-italic ribbon-icon-btn" title="Italic (Ctrl+I)"></button>
+            <button class="ql-underline ribbon-icon-btn" title="Underline (Ctrl+U)"></button>
+            <button class="ql-strike ribbon-icon-btn" title="Strikethrough"></button>
+            <button class="ql-script ribbon-icon-btn" value="sub" title="Subscript"></button>
+            <button class="ql-script ribbon-icon-btn" value="super" title="Superscript"></button>
+            <span class="ribbon-sub-sep"></span>
+            <select class="ql-color word-color-tool" title="Font Color"></select>
+            <select class="ql-background word-color-tool" title="Highlight Color"></select>
+          </div>
+          <span class="ribbon-label">Font</span>
+        </div>
+
+        <div class="ribbon-sep"></div>
+
+        <!-- Paragraph Group -->
+        <div class="ribbon-group paragraph-group" title="Paragraph & Alignment">
+          <div class="ribbon-row">
+            <button class="ql-list ribbon-icon-btn" value="bullet" title="Bulleted List"></button>
+            <button class="ql-list ribbon-icon-btn" value="ordered" title="Numbered List"></button>
+            <button class="ql-list ribbon-icon-btn" value="check" title="Checklist"></button>
+            <span class="ribbon-sub-sep"></span>
+            <button class="ql-indent ribbon-icon-btn" value="-1" title="Decrease Indent"></button>
+            <button class="ql-indent ribbon-icon-btn" value="+1" title="Increase Indent"></button>
+            <span class="ribbon-sub-sep"></span>
+            <select id="ribbon-line-spacing" class="word-select-spacing" title="Line Spacing">
+              <option value="1.0">1.0</option>
+              <option value="1.15" selected>1.15</option>
+              <option value="1.5">1.5</option>
+              <option value="2.0">2.0</option>
+            </select>
+          </div>
+          <div class="ribbon-row">
+            <button class="ql-align ribbon-icon-btn" value="" title="Align Left (Ctrl+L)"></button>
+            <button class="ql-align ribbon-icon-btn" value="center" title="Align Center (Ctrl+E)"></button>
+            <button class="ql-align ribbon-icon-btn" value="right" title="Align Right (Ctrl+R)"></button>
+            <button class="ql-align ribbon-icon-btn" value="justify" title="Justify (Ctrl+J)"></button>
+            <span class="ribbon-sub-sep"></span>
+            <button class="ql-blockquote ribbon-icon-btn" title="Blockquote"></button>
+            <button class="ql-code-block ribbon-icon-btn" title="Code Block"></button>
+          </div>
+          <span class="ribbon-label">Paragraph</span>
+        </div>
+
+        <div class="ribbon-sep"></div>
+
+        <!-- Styles / Headings Group -->
+        <div class="ribbon-group styles-group" title="Word Styles">
+          <div class="ribbon-row styles-row">
+            <select class="ql-header word-select-header" title="Styles">
+              <option value="" selected>Normal Text</option>
+              <option value="1">Heading 1</option>
+              <option value="2">Heading 2</option>
+              <option value="3">Heading 3</option>
+              <option value="4">Heading 4</option>
+            </select>
+          </div>
+          <span class="ribbon-label">Styles</span>
+        </div>
+
+        <div class="ribbon-sep"></div>
+
+        <!-- Insert Group -->
+        <div class="ribbon-group insert-group" title="Insert Elements">
+          <div class="ribbon-row">
+            <button id="btn-insert-page-break" class="ribbon-feature-btn" type="button" title="Insert Page Break (Ctrl+Enter)">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v6h16V4a2 2 0 0 0-2-2z" />
+                <path d="M4 14v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6" />
+                <line x1="2" y1="12" x2="22" y2="12" stroke-dasharray="3 3" />
+              </svg>
+              <span>Page Break</span>
+            </button>
+            <button id="btn-insert-hr" class="ribbon-icon-btn" type="button" title="Insert Horizontal Rule">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="4" y1="12" x2="20" y2="12" />
+              </svg>
+            </button>
+            <button class="ql-link ribbon-icon-btn" title="Insert Hyperlink"></button>
+            <button class="ql-image ribbon-icon-btn" title="Insert Image"></button>
+          </div>
+          <span class="ribbon-label">Insert</span>
+        </div>
+      </div>
+
+      <!-- Word Desk Workspace & Floating Paper Sheet -->
+      <div id="word-workspace" class="word-workspace">
+        <div id="word-page-sheet" class="word-page-sheet">
+          <div id="editor-content" class="word-editor-content">
+            <p><br /></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Microsoft Word Status Bar -->
+      <div id="editor-footer" class="word-status-bar">
+        <div class="word-status-left">
+          <span id="word-page-count" class="word-status-pill">Page 1 of 1</span>
+          <span class="word-status-sep">|</span>
+          <span id="editor-stats" class="word-status-pill">0 words · 0 characters</span>
+          <span class="word-status-sep">|</span>
+          <span class="word-status-pill">English (US)</span>
+        </div>
+        <div class="word-status-right">
+          <span id="editor-hint" class="word-status-hint"><kbd>Ctrl+S</kbd> Save PDF · <kbd>Ctrl+Enter</kbd> Page Break</span>
+          <span id="editor-format-hint" style="display: none;">Ctrl+B bold · Ctrl+I italic</span>
+          <div class="word-zoom-widget">
+            <button id="btn-doc-zoom-out" class="word-zoom-btn" type="button" title="Zoom Out">-</button>
+            <span id="doc-zoom-label" class="word-zoom-text">100%</span>
+            <button id="btn-doc-zoom-in" class="word-zoom-btn" type="button" title="Zoom In">+</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading-bar" hidden></div>
+
+    <div id="drop-overlay" hidden>
+      <div class="drop-badge">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        Drop PDF to open
+      </div>
+    </div>
+
+    <!-- Document Properties Modal -->
+    <div id="properties-modal" hidden>
+      <div class="modal modal-wide">
+        <div class="modal-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="16" x2="12" y2="12" />
+            <line x1="12" y1="8" x2="12.01" y2="8" />
+          </svg>
+          <span>Document Properties</span>
+        </div>
+        <div class="properties-grid" id="properties-content">
+          <!-- Filled dynamically -->
+        </div>
+        <div class="modal-actions">
+          <button id="btn-properties-close" class="primary-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Keyboard Shortcuts Modal -->
+    <div id="shortcuts-modal" hidden>
+      <div class="modal modal-wide">
+        <div class="modal-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="16" rx="2" />
+            <path d="M6 8h.01M10 8h.01M14 8h.01M18 8h.01M6 12h.01M10 12h.01M14 12h.01M18 12h.01M7 16h10" />
+          </svg>
+          <span>Keyboard Shortcuts</span>
+        </div>
+        <div class="shortcuts-table">
+          <div class="shortcut-row"><span class="shortcut-desc">New Tab</span><span><kbd>Ctrl</kbd> + <kbd>T</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Close Tab</span><span><kbd>Ctrl</kbd> + <kbd>W</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Next / Prev Tab</span><span><kbd>Ctrl</kbd> + <kbd>Tab</kbd> / <kbd>Ctrl+Shift+Tab</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Two-Page Side-by-Side</span><span><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>2</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Split View (Side-by-Side PDFs)</span><span><kbd>Ctrl</kbd> + <kbd>Alt</kbd> + <kbd>S</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">New Document</span><span><kbd>Ctrl</kbd> + <kbd>N</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Save Document as PDF</span><span><kbd>Ctrl</kbd> + <kbd>S</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Open PDF</span><span><kbd>Ctrl</kbd> + <kbd>O</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Find in Document</span><span><kbd>Ctrl</kbd> + <kbd>F</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Print Document</span><span><kbd>Ctrl</kbd> + <kbd>P</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Rotate Clockwise</span><span><kbd>Ctrl</kbd> + <kbd>R</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Zoom In / Out</span><span><kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>-</kbd> or <kbd>Ctrl+Wheel</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Actual Size (100%)</span><span><kbd>Ctrl</kbd> + <kbd>0</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Previous / Next Page</span><span><kbd>←</kbd> / <kbd>→</kbd> or <kbd>PgUp</kbd> / <kbd>PgDn</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">First / Last Page</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Toggle Sidebar</span><span><kbd>T</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Toggle Dark Mode</span><span><kbd>D</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Document Properties</span><span><kbd>Ctrl</kbd> + <kbd>D</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Show Shortcuts</span><span><kbd>?</kbd> or <kbd>F1</kbd></span></div>
+        </div>
+        <div class="modal-actions">
+          <button id="btn-shortcuts-close" class="primary-btn">Close</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="password-modal" hidden>
+      <div class="modal">
+        <div class="modal-head">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="4" y="11" width="16" height="10" rx="2" />
+            <path d="M8 11V8a4 4 0 0 1 8 0v3" />
+          </svg>
+          <span>Password protected</span>
+        </div>
+        <p id="password-note">This PDF requires a password to open.</p>
+        <input id="password-input" type="password" placeholder="Enter password" autocomplete="off" spellcheck="false" />
+        <p id="password-error" class="form-error" hidden>The password is incorrect. Try again.</p>
+        <div class="modal-actions">
+          <button id="btn-password-cancel" class="plain-btn">Cancel</button>
+          <button id="btn-password-ok" class="primary-btn">Unlock</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="print-host"></div>
+
+    <div id="find-bar" hidden>
+      <div class="find-input-wrap">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16" y2="16" />
+        </svg>
+        <input type="text" id="find-input" placeholder="Find in document..." autocomplete="off" spellcheck="false" />
+      </div>
+      <span id="find-results"></span>
+      <div class="find-sep"></div>
+      <button id="find-prev" class="icon-btn" title="Previous match (Shift+Enter)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 15l-6-6-6 6"/>
+        </svg>
+      </button>
+      <button id="find-next" class="icon-btn" title="Next match (Enter)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+      <div class="find-sep"></div>
+      <button id="find-close" class="icon-btn" title="Close search (Esc)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6L6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <script src="./quill/quill.js"></script>
+    <script type="module" src="./viewer.js"></script>
+  </body>
+</html>
