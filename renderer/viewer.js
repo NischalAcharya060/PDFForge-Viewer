@@ -3202,24 +3202,24 @@ async function showAboutModal() {
   hideAllOverlays();
   if (el.aboutModal) el.aboutModal.hidden = false;
   const info = await getOrFetchAppInfo();
-  if (el.aboutVersionBadge) el.aboutVersionBadge.textContent = `v${info.version || "1.1.0"}`;
-  if (el.emptyVersionLabel) el.emptyVersionLabel.textContent = `v${info.version || "1.1.0"}`;
+  const appVersion = info.version || "1.1.0";
+  if (el.aboutVersionBadge) el.aboutVersionBadge.textContent = `v${appVersion}`;
+  if (el.emptyVersionLabel) el.emptyVersionLabel.textContent = `v${appVersion}`;
 
-  const platformName = info.platform === "win32" ? "Windows" : info.platform === "darwin" ? "macOS" : info.platform === "linux" ? "Linux" : info.platform;
-  const osString = `${platformName} ${info.arch ? `(${info.arch})` : ""} ${info.osVersion || ""}`.trim();
+  const platformName = info.platform === "win32" ? "Windows" : info.platform === "darwin" ? "macOS" : info.platform === "linux" ? "Linux" : (info.platform || "Desktop");
+  const archString = info.arch === "x64" ? "64-bit" : info.arch === "arm64" ? "ARM 64-bit" : info.arch || "";
+  const osString = `${platformName} ${archString}`.trim();
 
   const rows = [
-    ["App Version", `${info.version || "1.1.0"} <span class="about-pill">Stable</span>`],
-    ["Electron Runtime", `v${info.electron || "—"}`],
-    ["Chromium Engine", `v${info.chrome || "—"}`],
-    ["Node.js Engine", `v${info.node || "—"}`],
-    ["V8 JavaScript", `v${info.v8 || "—"}`],
-    ["Operating System", osString],
-    ["PDF Reader Engine", `Mozilla PDF.js v6.3.289`],
-    ["PDF Document Engine", `PDF-Lib v1.17.1`],
-    ["Rich Editor Engine", `Quill v2.0.3`],
-    ["Security Architecture", `<span class="about-pill green">Sandbox Enabled · Context Isolated</span>`],
-    ["License", "MIT Open Source License"],
+    ["Product", `PDFForge Viewer`],
+    ["Version", `${appVersion} <span class="about-pill green">Latest Release</span>`],
+    ["Edition", `Desktop Standard Edition`],
+    ["Platform", osString],
+    ["Privacy", `<span class="about-pill green">100% Offline · Zero Telemetry</span>`],
+    ["Document Security", `<span class="about-pill green">On-Device Local Processing</span>`],
+    ["Key Features", `Multi-Tab Reading, Split View, Word Editor, Instant Search`],
+    ["Publisher", `PDFForge`],
+    ["License", `Free & Open Source (MIT License)`],
   ];
 
   if (el.aboutInfoGrid) {
@@ -3231,29 +3231,27 @@ async function showAboutModal() {
 
 async function copyAboutInfo() {
   const info = await getOrFetchAppInfo();
-  const platformName = info.platform === "win32" ? "Windows" : info.platform === "darwin" ? "macOS" : info.platform === "linux" ? "Linux" : info.platform;
-  const osString = `${platformName} ${info.arch ? `(${info.arch})` : ""} ${info.osVersion || ""}`.trim();
+  const appVersion = info.version || "1.1.0";
+  const platformName = info.platform === "win32" ? "Windows" : info.platform === "darwin" ? "macOS" : info.platform === "linux" ? "Linux" : (info.platform || "Desktop");
+  const archString = info.arch === "x64" ? "64-bit" : info.arch === "arm64" ? "ARM 64-bit" : info.arch || "";
+  const osString = `${platformName} ${archString}`.trim();
 
   const text = [
-    `# PDFForge Viewer Diagnostic & Version Info`,
-    `- **Application**: PDFForge Viewer`,
-    `- **App Version**: ${info.version || "1.1.0"}`,
-    `- **Electron**: ${info.electron || "—"}`,
-    `- **Chromium**: ${info.chrome || "—"}`,
-    `- **Node.js**: ${info.node || "—"}`,
-    `- **V8**: ${info.v8 || "—"}`,
-    `- **OS / Platform**: ${osString}`,
-    `- **PDF.js Engine**: 6.3.289`,
-    `- **PDF-Lib**: 1.17.1`,
-    `- **Quill Engine**: 2.0.3`,
-    `- **Sandbox Isolation**: Active`,
-    `- **Privacy / Mode**: 100% Offline (Zero Telemetry)`,
-    `- **License**: MIT`,
+    `# PDFForge Viewer - Application Information`,
+    `- **Product**: PDFForge Viewer`,
+    `- **Version**: ${appVersion}`,
+    `- **Edition**: Desktop Standard Edition`,
+    `- **Platform**: ${osString}`,
+    `- **Privacy**: 100% Offline (Zero Telemetry, No Cloud Uploads)`,
+    `- **Security**: On-Device Local Processing`,
+    `- **Key Features**: Multi-Tab Reading, Split View, Rich Document Creation, Instant Search`,
+    `- **Publisher**: PDFForge`,
+    `- **License**: Free & Open Source (MIT License)`,
   ].join("\n");
 
   const copied = await copyToClipboard(text);
   if (copied) {
-    showToast("System & version info copied to clipboard", "success");
+    showToast("Application details copied to clipboard", "success");
   } else {
     showToast("Could not copy info to clipboard", "error");
   }
@@ -3361,54 +3359,87 @@ async function openFromDialog() {
   openMultipleFiles(files);
 }
 
+let isPrinting = false;
+
 async function printDocument() {
+  if (isPrinting) return;
+
   if (state.editor.active && quill) {
+    if (!editorHasContent()) {
+      showToast("Document has no content to print", "info");
+      return;
+    }
+    isPrinting = true;
     el.printHost.textContent = "";
     const sheet = document.createElement("section");
     sheet.className = "print-sheet print-editor-sheet";
     sheet.innerHTML = quill.root ? quill.root.innerHTML : "";
     el.printHost.appendChild(sheet);
+    let cleaned = false;
     const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
       el.printHost.textContent = "";
       window.removeEventListener("afterprint", cleanup);
+      isPrinting = false;
     };
     window.addEventListener("afterprint", cleanup);
     window.print();
-    setTimeout(cleanup, 1500);
+    setTimeout(cleanup, 60000);
     return;
   }
-  if (!state.doc) return;
-  el.printHost.textContent = "";
-  const maxW = 2000;
-  for (const p of state.pages) {
-    const rot = (p.page.rotate + state.rotation) % 360;
-    const vp1 = p.page.getViewport({ scale: 1, rotation: rot });
-    const scale = Math.min(2, maxW / vp1.width);
-    const viewport = p.page.getViewport({ scale, rotation: rot });
-    const sheet = document.createElement("section");
-    sheet.className = "print-sheet";
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.ceil(viewport.width);
-    canvas.height = Math.ceil(viewport.height);
-    const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    sheet.appendChild(canvas);
-    el.printHost.appendChild(sheet);
-    try {
-      await p.page.render({ canvasContext: ctx, viewport }).promise;
-    } catch {
-      // ignore one page
-    }
-    await new Promise((r) => setTimeout(r, 0));
+
+  if (!state.doc) {
+    showToast("Open a document to print", "info");
+    return;
   }
-  const cleanup = () => {
+
+  isPrinting = true;
+  el.printHost.textContent = "";
+  if (state.pages && state.pages.length > 4) {
+    showToast("Preparing document for printing…", "info");
+  }
+
+  try {
+    const maxW = 2000;
+    for (const p of state.pages) {
+      const rot = (p.page.rotate + state.rotation) % 360;
+      const vp1 = p.page.getViewport({ scale: 1, rotation: rot });
+      const scale = Math.min(2, maxW / vp1.width);
+      const viewport = p.page.getViewport({ scale, rotation: rot });
+      const sheet = document.createElement("section");
+      sheet.className = "print-sheet";
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.ceil(viewport.width);
+      canvas.height = Math.ceil(viewport.height);
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      sheet.appendChild(canvas);
+      el.printHost.appendChild(sheet);
+      try {
+        await p.page.render({ canvasContext: ctx, viewport }).promise;
+      } catch {
+        // ignore one page render error
+      }
+      await new Promise((r) => setTimeout(r, 0));
+    }
+    let cleaned = false;
+    const cleanup = () => {
+      if (cleaned) return;
+      cleaned = true;
+      el.printHost.textContent = "";
+      window.removeEventListener("afterprint", cleanup);
+      isPrinting = false;
+    };
+    window.addEventListener("afterprint", cleanup);
+    window.print();
+    setTimeout(cleanup, 60000);
+  } catch (err) {
     el.printHost.textContent = "";
-    window.removeEventListener("afterprint", cleanup);
-  };
-  window.addEventListener("afterprint", cleanup);
-  window.print();
-  setTimeout(cleanup, 1500);
+    isPrinting = false;
+    showToast("Could not prepare document for printing", "error");
+  }
 }
 
 function applyTheme(theme, persist) {

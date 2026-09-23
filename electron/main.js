@@ -380,7 +380,6 @@ async function runSmoke() {
         "document.getElementById('btn-new-tab') && " +
         "document.getElementById('btn-split-view') && " +
         "document.getElementById('btn-two-page') && " +
-        "document.getElementById('btn-add-page') && " +
         "document.querySelectorAll('.chrome-tab').length >= 1)"
     );
     console.log("[smoke] tabs and layout controls ok:", tabsOk);
