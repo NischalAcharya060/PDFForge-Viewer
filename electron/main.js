@@ -132,6 +132,26 @@ function createWindow() {
     if (mainWindow === win) mainWindow = null;
   });
 
+  // Intercept close to allow renderer to show unsaved changes warning
+  let closeConfirmed = false;
+
+  win.on("close", (e) => {
+    if (closeConfirmed) return; // Already confirmed, allow close
+    e.preventDefault();
+    // Ask renderer if there are unsaved changes
+    win.webContents.send("app:close-requested");
+  });
+
+  ipcMain.handle("app:confirm-close", (_event, action) => {
+    if (action === "close") {
+      closeConfirmed = true;
+      if (win && !win.isDestroyed()) {
+        win.destroy();
+      }
+    }
+    // action === "cancel" means user chose to stay
+  });
+
   return win;
 }
 

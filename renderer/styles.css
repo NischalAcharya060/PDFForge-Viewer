@@ -108,7 +108,8 @@ body {
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   user-select: none;
-  z-index: 20;
+  z-index: 200;
+  position: relative;
 }
 
 .toolbar-group {
@@ -717,7 +718,7 @@ kbd {
   display: flex;
   flex-direction: column;
   background: var(--bg);
-  z-index: 50;
+  z-index: 250;
   color: var(--text);
   font-family: inherit;
 }
@@ -843,8 +844,10 @@ kbd {
   border: none;
   border-bottom: 1px solid var(--border);
   padding: 6px 14px 4px;
-  overflow-x: auto;
+  overflow: visible;
   user-select: none;
+  position: relative;
+  z-index: 10;
 }
 
 .ribbon-group {
@@ -854,12 +857,270 @@ kbd {
   align-items: center;
   padding: 0 3px;
   gap: 3px;
+  overflow: visible;
+  position: relative;
+}
+
+/* Quill Picker Dropdowns — ensure they show above page content and display text */
+.word-ribbon.ql-toolbar.ql-snow .ql-picker {
+  position: relative;
+  overflow: visible;
+  color: var(--text);
+  font-size: 11px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-label {
+  color: var(--text);
+  border: 1px solid var(--field-border);
+  border-radius: 6px;
+  background: var(--field);
+  padding: 0 6px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.12s;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-label:hover {
+  border-color: var(--accent);
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.ql-expanded .ql-picker-label {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-label svg {
+  right: 6px;
+  stroke: var(--text);
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.ql-font {
+  width: 120px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.ql-size {
+  width: 56px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.word-select-spacing {
+  width: 58px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker.ql-header {
+  width: 120px;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-options {
+  position: absolute;
+  z-index: 500;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  padding: 4px;
+  min-width: 100%;
+  max-height: 280px;
+  overflow-y: auto;
+  color: var(--text);
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-item {
+  padding: 5px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  color: var(--text);
+  font-size: 12px;
+  display: block;
+}
+
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-item:hover,
+.word-ribbon.ql-toolbar.ql-snow .ql-picker-item.ql-selected {
+  background: var(--hover);
+  color: var(--accent);
+}
+
+/* ==========================================================================
+   Quill Picker Items Text Content (Fonts, Sizes, Headings)
+   Quill Snow theme items are empty spans that require ::before content rules.
+   ========================================================================== */
+
+/* Font Family Picker */
+.ql-snow .ql-picker.ql-font .ql-picker-label::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item::before {
+  content: "Calibri";
+  font-family: "Calibri", "Segoe UI", sans-serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before {
+  content: "Arial";
+  font-family: Arial, sans-serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before {
+  content: "Times New Roman";
+  font-family: "Times New Roman", Times, serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="georgia"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="georgia"]::before {
+  content: "Georgia";
+  font-family: Georgia, serif;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="courier"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="courier"]::before {
+  content: "Courier New";
+  font-family: "Courier New", Courier, monospace;
+}
+.ql-snow .ql-picker.ql-font .ql-picker-label[data-value="segoe"]::before,
+.ql-snow .ql-picker.ql-font .ql-picker-item[data-value="segoe"]::before {
+  content: "Segoe UI";
+  font-family: "Segoe UI", sans-serif;
+}
+
+/* Font Size Picker */
+.ql-snow .ql-picker.ql-size .ql-picker-label::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item::before {
+  content: "11";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="9pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="9pt"]::before {
+  content: "9";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="10pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="10pt"]::before {
+  content: "10";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="11pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="11pt"]::before {
+  content: "11";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="12pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="12pt"]::before {
+  content: "12";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="14pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="14pt"]::before {
+  content: "14";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="16pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="16pt"]::before {
+  content: "16";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="18pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="18pt"]::before {
+  content: "18";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="20pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="20pt"]::before {
+  content: "20";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="24pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="24pt"]::before {
+  content: "24";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="28pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="28pt"]::before {
+  content: "28";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="36pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="36pt"]::before {
+  content: "36";
+}
+.ql-snow .ql-picker.ql-size .ql-picker-label[data-value="48pt"]::before,
+.ql-snow .ql-picker.ql-size .ql-picker-item[data-value="48pt"]::before {
+  content: "48";
+}
+
+/* Styles / Headings Picker */
+.ql-snow .ql-picker.ql-header .ql-picker-label::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item::before {
+  content: "Normal Text";
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="1"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="1"]::before {
+  content: "Heading 1";
+  font-size: 15px;
+  font-weight: 700;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="2"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="2"]::before {
+  content: "Heading 2";
+  font-size: 13px;
+  font-weight: 700;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="3"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="3"]::before {
+  content: "Heading 3";
+  font-size: 12px;
+  font-weight: 600;
+}
+.ql-snow .ql-picker.ql-header .ql-picker-label[data-value="4"]::before,
+.ql-snow .ql-picker.ql-header .ql-picker-item[data-value="4"]::before {
+  content: "Heading 4";
+  font-size: 11px;
+  font-weight: 600;
+}
+
+/* Line Spacing Picker */
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-label]:not([data-label=''])::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-label]:not([data-label=''])::before {
+  content: attr(data-label);
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item::before {
+  content: "1.15";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.0"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.0"]::before {
+  content: "1.0";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.15"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.15"]::before {
+  content: "1.15";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.25"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.25"]::before {
+  content: "1.25";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.45"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.45"]::before {
+  content: "1.45";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="1.5"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="1.5"]::before {
+  content: "1.5";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="2.0"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="2.0"]::before {
+  content: "2.0";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="2.5"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="2.5"]::before {
+  content: "2.5";
+}
+.ql-snow .ql-picker.word-select-spacing .ql-picker-label[data-value="3.0"]::before,
+.ql-snow .ql-picker.word-select-spacing .ql-picker-item[data-value="3.0"]::before {
+  content: "3.0";
+}
+
+/* Native selects inside ribbon — ensure they show above content */
+.word-ribbon select,
+.word-ribbon .word-select-spacing,
+.word-ribbon .word-select-font,
+.word-ribbon .word-select-size,
+.word-ribbon .word-select-header {
+  position: relative;
+  z-index: 5;
 }
 
 .ribbon-row {
   display: flex;
   align-items: center;
   gap: 2px;
+  overflow: visible;
+  position: relative;
 }
 
 .ribbon-label {
@@ -986,7 +1247,7 @@ kbd {
 }
 
 .word-select-spacing {
-  width: 62px;
+  width: 58px;
 }
 
 .word-select-header {
@@ -1007,6 +1268,18 @@ kbd {
 .word-select-header:focus {
   border-color: var(--accent);
   outline: 1.5px solid var(--accent);
+}
+
+/* Ensure native select options have explicit, legible background & color in all themes */
+select option {
+  background-color: var(--surface, #ffffff);
+  color: var(--text, #111827);
+  padding: 6px 10px;
+}
+
+:root[data-theme="dark"] select option {
+  background-color: var(--surface, #1b212c);
+  color: var(--text, #f0f3f6);
 }
 
 .word-color-tool.ql-picker {
@@ -1494,7 +1767,7 @@ kbd {
   justify-content: center;
   background: rgba(0, 0, 0, 0.5);
   backdrop-filter: blur(5px);
-  z-index: 50;
+  z-index: 1000;
 }
 
 #password-modal[hidden],
@@ -2241,6 +2514,7 @@ kbd {
 .dropdown-wrapper {
   position: relative;
   display: inline-flex;
+  overflow: visible;
 }
 
 .dropdown-menu {
@@ -2253,7 +2527,7 @@ kbd {
   border-radius: 8px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
   padding: 4px;
-  z-index: 100;
+  z-index: 500;
   display: flex;
   flex-direction: column;
   gap: 2px;
@@ -2371,6 +2645,466 @@ kbd {
 :root[data-theme="dark"] .word-ribbon button:hover .ql-fill,
 :root[data-theme="dark"] .word-ribbon button.ql-active .ql-fill {
   fill: var(--accent);
+}
+
+/* ==========================================================================
+   Image Insert Modal
+   ========================================================================== */
+#image-insert-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  z-index: 1000;
+}
+
+#image-insert-modal[hidden] {
+  display: none !important;
+}
+
+.image-modal {
+  width: 480px;
+  max-width: 90vw;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 0;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  animation: modal-pop 0.16s ease-out;
+  overflow: hidden;
+}
+
+.image-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 24px 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.image-modal-header svg {
+  width: 20px;
+  height: 20px;
+  stroke: var(--accent);
+  flex-shrink: 0;
+}
+
+.image-modal-header span {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text);
+}
+
+.image-modal-tabs {
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.image-modal-tab {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s, background 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.image-modal-tab:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.image-modal-tab.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  background: var(--surface);
+}
+
+.image-modal-tab svg {
+  width: 15px;
+  height: 15px;
+  stroke: currentColor;
+}
+
+.image-modal-body {
+  padding: 20px 24px;
+  min-height: 200px;
+}
+
+.image-tab-panel {
+  display: none;
+}
+
+.image-tab-panel.active {
+  display: block;
+}
+
+/* Drop Zone */
+.image-drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 12px;
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s;
+  background: var(--bg);
+}
+
+.image-drop-zone:hover,
+.image-drop-zone.drag-over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.image-drop-zone-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.image-drop-zone-icon svg {
+  width: 36px;
+  height: 36px;
+  stroke: var(--muted);
+  opacity: 0.6;
+}
+
+.image-drop-zone.drag-over .image-drop-zone-icon svg {
+  stroke: var(--accent);
+  opacity: 1;
+}
+
+.image-drop-zone-text {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.image-drop-zone-text strong {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.image-drop-zone-hint {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+  margin-top: 6px;
+}
+
+/* URL Input */
+.image-url-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.image-url-input {
+  flex: 1;
+  height: 38px;
+  padding: 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--field, var(--bg));
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.image-url-input:focus {
+  border-color: var(--accent);
+}
+
+.image-url-input::placeholder {
+  color: var(--muted);
+  opacity: 0.7;
+}
+
+.image-url-load-btn {
+  height: 38px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.image-url-load-btn:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+
+.image-url-hint {
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.7;
+  margin-top: 8px;
+}
+
+/* Image Preview */
+.image-preview-container {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  padding: 12px;
+  text-align: center;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+.image-preview-container img {
+  max-width: 100%;
+  max-height: 220px;
+  border-radius: 6px;
+  object-fit: contain;
+}
+
+.image-preview-container .image-preview-placeholder {
+  color: var(--muted);
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.image-preview-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.image-preview-remove {
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+
+.image-preview-remove:hover {
+  background: var(--accent-soft);
+}
+
+/* Modal Footer */
+.image-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 24px 18px;
+  border-top: 1px solid var(--border);
+}
+
+.image-modal-footer .primary-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Loading spinner for URL fetch */
+.image-loading-spinner {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: img-spin 0.6s linear infinite;
+}
+
+@keyframes img-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Editor image styling */
+.word-editor-content img,
+.ql-editor img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 4px;
+  margin: 8px 0;
+  cursor: default;
+}
+
+/* ==========================================================================
+   Image Resize Handles (Word-style)
+   ========================================================================== */
+.ql-editor img {
+  cursor: pointer;
+}
+
+.ql-editor img.img-selected {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  cursor: default;
+}
+
+.img-resize-wrapper {
+  position: absolute;
+  pointer-events: none;
+  z-index: 50;
+  box-sizing: border-box;
+  border: 1px dashed rgba(229, 72, 77, 0.4);
+}
+
+.img-resize-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: #fff;
+  border: 2px solid var(--accent, #e5484d);
+  border-radius: 2px;
+  pointer-events: auto;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+  z-index: 51;
+  transition: transform 0.1s;
+}
+
+.img-resize-handle:hover {
+  transform: scale(1.3);
+  background: var(--accent, #e5484d);
+  border-color: var(--accent, #e5484d);
+}
+
+.img-resize-handle.nw { top: -5px; left: -5px; cursor: nw-resize; }
+.img-resize-handle.n  { top: -5px; left: calc(50% - 5px); cursor: n-resize; }
+.img-resize-handle.ne { top: -5px; right: -5px; cursor: ne-resize; }
+.img-resize-handle.w  { top: calc(50% - 5px); left: -5px; cursor: w-resize; }
+.img-resize-handle.e  { top: calc(50% - 5px); right: -5px; cursor: e-resize; }
+.img-resize-handle.sw { bottom: -5px; left: -5px; cursor: sw-resize; }
+.img-resize-handle.s  { bottom: -5px; left: calc(50% - 5px); cursor: s-resize; }
+.img-resize-handle.se { bottom: -5px; right: -5px; cursor: se-resize; }
+
+.img-resize-tooltip {
+  position: absolute;
+  bottom: -28px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel, #fff);
+  color: var(--muted, #6b7280);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border, #e2e4e8);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 52;
+}
+
+/* ==========================================================================
+   Unsaved Changes Warning Modal
+   ========================================================================== */
+#unsaved-warning-modal {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+  z-index: 2000;
+}
+
+#unsaved-warning-modal[hidden] {
+  display: none !important;
+}
+
+.unsaved-modal {
+  width: 420px;
+  max-width: 90vw;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 28px 28px 20px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.35);
+  animation: modal-pop 0.16s ease-out;
+  text-align: center;
+}
+
+.unsaved-modal-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.unsaved-modal-icon svg {
+  width: 48px;
+  height: 48px;
+  color: #f59e0b;
+}
+
+.unsaved-modal h2 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+
+.unsaved-modal p {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 20px;
+  line-height: 1.5;
+}
+
+.unsaved-modal-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+}
+
+.unsaved-modal-actions .primary-btn {
+  min-width: 100px;
+}
+
+.unsaved-modal-actions .plain-btn {
+  min-width: 100px;
+}
+
+.unsaved-btn-danger {
+  min-width: 100px;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.unsaved-btn-danger:hover {
+  opacity: 0.9;
 }
 
 /* ==========================================================================

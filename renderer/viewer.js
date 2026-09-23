@@ -50,6 +50,7 @@ const state = {
 
 const el = {
   tabBar: document.getElementById("tab-bar"),
+  toolbar: document.getElementById("toolbar"),
   tabsList: document.getElementById("tabs-list"),
   btnNewTab: document.getElementById("btn-new-tab"),
   btnSplitView: document.getElementById("btn-split-view"),
@@ -169,6 +170,35 @@ const el = {
   ctxCloseRight: document.getElementById("ctx-close-right"),
   ctxDuplicateTab: document.getElementById("ctx-duplicate-tab"),
   ctxNewTab: document.getElementById("ctx-new-tab"),
+  // Image Insert Modal
+  imageInsertModal: document.getElementById("image-insert-modal"),
+  imgTabDevice: document.getElementById("img-tab-device"),
+  imgTabUrl: document.getElementById("img-tab-url"),
+  imgPanelDevice: document.getElementById("img-panel-device"),
+  imgPanelUrl: document.getElementById("img-panel-url"),
+  imgDropZone: document.getElementById("img-drop-zone"),
+  imgBrowseTrigger: document.getElementById("img-browse-trigger"),
+  imgFileInput: document.getElementById("img-file-input"),
+  imgDevicePreview: document.getElementById("img-device-preview"),
+  imgDevicePreviewImg: document.getElementById("img-device-preview-img"),
+  imgDeviceInfo: document.getElementById("img-device-info"),
+  imgDeviceName: document.getElementById("img-device-name"),
+  imgDeviceRemove: document.getElementById("img-device-remove"),
+  imgUrlInput: document.getElementById("img-url-input"),
+  imgUrlLoad: document.getElementById("img-url-load"),
+  imgUrlPreview: document.getElementById("img-url-preview"),
+  imgUrlPreviewImg: document.getElementById("img-url-preview-img"),
+  imgUrlInfo: document.getElementById("img-url-info"),
+  imgUrlStatus: document.getElementById("img-url-status"),
+  imgUrlRemove: document.getElementById("img-url-remove"),
+  imgCancelBtn: document.getElementById("img-cancel-btn"),
+  imgInsertBtn: document.getElementById("img-insert-btn"),
+  // Unsaved Changes Warning Modal
+  unsavedWarningModal: document.getElementById("unsaved-warning-modal"),
+  unsavedDocName: document.getElementById("unsaved-doc-name"),
+  unsavedBtnCancel: document.getElementById("unsaved-btn-cancel"),
+  unsavedBtnDiscard: document.getElementById("unsaved-btn-discard"),
+  unsavedBtnSave: document.getElementById("unsaved-btn-save"),
 };
 
 for (const preset of ZOOM_PRESETS) {
@@ -433,6 +463,7 @@ function restoreTab(tab) {
     updateEditorChrome();
   } else if (tab.type === "pdf") {
     el.editorView.hidden = true;
+    if (el.toolbar) el.toolbar.hidden = false;
     el.emptyState.hidden = true;
     el.errorState.hidden = true;
 
@@ -489,6 +520,7 @@ function restoreTab(tab) {
     queueVisibleRender();
   } else {
     el.editorView.hidden = true;
+    if (el.toolbar) el.toolbar.hidden = false;
     el.errorState.hidden = true;
     if (el.pageHost) el.pageHost.textContent = "";
     if (el.thumbList) el.thumbList.textContent = "";
@@ -884,6 +916,87 @@ if (typeof Quill !== "undefined" && el.editorContent) {
   });
   window.__quill = quill;
 
+  // Ensure all Quill pickers (Font, Size, Header) have explicit data-label attributes
+  function setupQuillPickerLabels() {
+    const fontLabels = {
+      "": "Calibri",
+      "arial": "Arial",
+      "times-new-roman": "Times New Roman",
+      "georgia": "Georgia",
+      "courier": "Courier New",
+      "segoe": "Segoe UI",
+    };
+    document.querySelectorAll(".word-ribbon .ql-picker.ql-font .ql-picker-item").forEach((item) => {
+      const val = item.getAttribute("data-value") || "";
+      if (fontLabels[val]) {
+        item.setAttribute("data-label", fontLabels[val]);
+      }
+    });
+
+    const sizeLabels = {
+      "": "11",
+      "9pt": "9",
+      "10pt": "10",
+      "11pt": "11",
+      "12pt": "12",
+      "14pt": "14",
+      "16pt": "16",
+      "18pt": "18",
+      "20pt": "20",
+      "24pt": "24",
+      "28pt": "28",
+      "36pt": "36",
+      "48pt": "48",
+    };
+    document.querySelectorAll(".word-ribbon .ql-picker.ql-size .ql-picker-item").forEach((item) => {
+      const val = item.getAttribute("data-value") || "";
+      if (sizeLabels[val]) {
+        item.setAttribute("data-label", sizeLabels[val]);
+      }
+    });
+
+    const headerLabels = {
+      "": "Normal Text",
+      "1": "Heading 1",
+      "2": "Heading 2",
+      "3": "Heading 3",
+      "4": "Heading 4",
+    };
+    document.querySelectorAll(".word-ribbon .ql-picker.ql-header .ql-picker-item").forEach((item) => {
+      const val = item.getAttribute("data-value") || "";
+      if (headerLabels[val]) {
+        item.setAttribute("data-label", headerLabels[val]);
+      }
+    });
+
+    const spacingLabels = {
+      "": "1.15",
+      "1.0": "1.0",
+      "1.15": "1.15",
+      "1.25": "1.25",
+      "1.45": "1.45",
+      "1.5": "1.5",
+      "2.0": "2.0",
+      "2.5": "2.5",
+      "3.0": "3.0",
+    };
+    document.querySelectorAll(".word-ribbon .ql-picker.word-select-spacing .ql-picker-item").forEach((item) => {
+      const val = item.getAttribute("data-value") || "";
+      if (spacingLabels[val]) {
+        item.setAttribute("data-label", spacingLabels[val]);
+      }
+    });
+    // Set initial label on spacing picker
+    const spacingLabel = document.querySelector(".word-ribbon .ql-picker.word-select-spacing .ql-picker-label");
+    if (spacingLabel && !spacingLabel.getAttribute("data-label")) {
+      const curVal = el.ribbonLineSpacing ? el.ribbonLineSpacing.value : "1.15";
+      spacingLabel.setAttribute("data-label", spacingLabels[curVal] || curVal || "1.15");
+      spacingLabel.setAttribute("data-value", curVal || "1.15");
+    }
+  }
+
+  setupQuillPickerLabels();
+
   if (el.editorContent) {
     el.editorContent.addEventListener("click", (e) => {
       const link = e.target.closest("a");
@@ -896,6 +1009,618 @@ if (typeof Quill !== "undefined" && el.editorContent) {
     });
   }
 }
+
+// ==========================================================================
+//   Image Insert Modal Logic
+// ==========================================================================
+let pendingImageDataUrl = null;
+
+function openImageInsertModal() {
+  if (!el.imageInsertModal) return;
+  pendingImageDataUrl = null;
+  // Reset to device tab
+  switchImageTab("device");
+  // Reset device panel
+  clearDevicePreview();
+  // Reset URL panel
+  clearUrlPreview();
+  if (el.imgUrlInput) el.imgUrlInput.value = "";
+  // Disable insert button
+  if (el.imgInsertBtn) el.imgInsertBtn.disabled = true;
+  // Show modal
+  el.imageInsertModal.hidden = false;
+}
+
+function closeImageInsertModal() {
+  if (!el.imageInsertModal) return;
+  el.imageInsertModal.hidden = true;
+  pendingImageDataUrl = null;
+  if (el.imgFileInput) el.imgFileInput.value = "";
+}
+
+function switchImageTab(tab) {
+  const isDevice = tab === "device";
+  if (el.imgTabDevice) el.imgTabDevice.classList.toggle("active", isDevice);
+  if (el.imgTabUrl) el.imgTabUrl.classList.toggle("active", !isDevice);
+  if (el.imgPanelDevice) el.imgPanelDevice.classList.toggle("active", isDevice);
+  if (el.imgPanelUrl) el.imgPanelUrl.classList.toggle("active", !isDevice);
+  // Reset pending when switching tabs
+  pendingImageDataUrl = null;
+  if (el.imgInsertBtn) el.imgInsertBtn.disabled = true;
+}
+
+function clearDevicePreview() {
+  if (el.imgDropZone) el.imgDropZone.style.display = "";
+  if (el.imgDevicePreview) el.imgDevicePreview.style.display = "none";
+  if (el.imgDevicePreviewImg) el.imgDevicePreviewImg.src = "";
+  if (el.imgDeviceInfo) el.imgDeviceInfo.style.display = "none";
+  if (el.imgDeviceName) el.imgDeviceName.textContent = "";
+  pendingImageDataUrl = null;
+  if (el.imgInsertBtn) el.imgInsertBtn.disabled = true;
+}
+
+function clearUrlPreview() {
+  if (el.imgUrlPreview) el.imgUrlPreview.style.display = "none";
+  if (el.imgUrlPreviewImg) el.imgUrlPreviewImg.src = "";
+  if (el.imgUrlInfo) el.imgUrlInfo.style.display = "none";
+  if (el.imgUrlStatus) el.imgUrlStatus.textContent = "";
+  pendingImageDataUrl = null;
+  if (el.imgInsertBtn) el.imgInsertBtn.disabled = true;
+}
+
+function handleDeviceImageFile(file) {
+  if (!file || !file.type.startsWith("image/")) {
+    showToast("Please select a valid image file.", "error");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const dataUrl = e.target.result;
+    pendingImageDataUrl = dataUrl;
+    // Show preview
+    if (el.imgDropZone) el.imgDropZone.style.display = "none";
+    if (el.imgDevicePreview) el.imgDevicePreview.style.display = "flex";
+    if (el.imgDevicePreviewImg) el.imgDevicePreviewImg.src = dataUrl;
+    if (el.imgDeviceInfo) el.imgDeviceInfo.style.display = "flex";
+    if (el.imgDeviceName) {
+      const sizeKB = (file.size / 1024).toFixed(1);
+      el.imgDeviceName.textContent = `${file.name} (${sizeKB} KB)`;
+    }
+    if (el.imgInsertBtn) el.imgInsertBtn.disabled = false;
+  };
+  reader.onerror = () => {
+    showToast("Failed to read image file.", "error");
+  };
+  reader.readAsDataURL(file);
+}
+
+async function handleUrlImageLoad() {
+  const url = el.imgUrlInput ? el.imgUrlInput.value.trim() : "";
+  if (!url) {
+    showToast("Please enter an image URL.", "info");
+    return;
+  }
+  // Show loading state
+  if (el.imgUrlPreview) {
+    el.imgUrlPreview.style.display = "flex";
+    el.imgUrlPreview.innerHTML = '<div class="image-loading-spinner"></div>';
+  }
+  if (el.imgUrlInfo) el.imgUrlInfo.style.display = "none";
+
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const contentType = response.headers.get("content-type") || "";
+    if (!contentType.startsWith("image/")) {
+      throw new Error("URL does not point to an image");
+    }
+    const blob = await response.blob();
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target.result;
+      pendingImageDataUrl = dataUrl;
+      if (el.imgUrlPreview) {
+        el.imgUrlPreview.innerHTML = '';
+        const img = document.createElement("img");
+        img.id = "img-url-preview-img";
+        img.src = dataUrl;
+        img.alt = "Preview";
+        el.imgUrlPreview.appendChild(img);
+      }
+      if (el.imgUrlInfo) el.imgUrlInfo.style.display = "flex";
+      const sizeKB = (blob.size / 1024).toFixed(1);
+      if (el.imgUrlStatus) el.imgUrlStatus.textContent = `${sizeKB} KB · Loaded from URL`;
+      if (el.imgInsertBtn) el.imgInsertBtn.disabled = false;
+    };
+    reader.onerror = () => {
+      throw new Error("Failed to convert image");
+    };
+    reader.readAsDataURL(blob);
+  } catch (err) {
+    if (el.imgUrlPreview) {
+      el.imgUrlPreview.innerHTML = '';
+      el.imgUrlPreview.style.display = "flex";
+      // Try loading the URL directly as an img (for cases where fetch is blocked by CORS)
+      const img = document.createElement("img");
+      img.alt = "Preview";
+      img.onload = () => {
+        // Image loaded directly — use the URL as-is
+        pendingImageDataUrl = url;
+        if (el.imgUrlInfo) el.imgUrlInfo.style.display = "flex";
+        if (el.imgUrlStatus) el.imgUrlStatus.textContent = "Loaded from URL (external)";
+        if (el.imgInsertBtn) el.imgInsertBtn.disabled = false;
+      };
+      img.onerror = () => {
+        el.imgUrlPreview.innerHTML = '<span class="image-preview-placeholder">Failed to load image. Check the URL and try again.</span>';
+        pendingImageDataUrl = null;
+        if (el.imgInsertBtn) el.imgInsertBtn.disabled = true;
+      };
+      img.src = url;
+      el.imgUrlPreview.appendChild(img);
+    }
+  }
+}
+
+function insertPendingImage() {
+  if (!pendingImageDataUrl || !quill) return;
+  const range = quill.getSelection(true) || { index: quill.getLength(), length: 0 };
+  quill.insertEmbed(range.index, "image", pendingImageDataUrl, "user");
+  quill.setSelection(range.index + 1, "silent");
+  closeImageInsertModal();
+}
+
+// Bind image modal events
+function bindImageModalEvents() {
+  // Tab switching
+  if (el.imgTabDevice) el.imgTabDevice.addEventListener("click", () => switchImageTab("device"));
+  if (el.imgTabUrl) el.imgTabUrl.addEventListener("click", () => switchImageTab("url"));
+
+  // Browse files trigger
+  if (el.imgBrowseTrigger) {
+    el.imgBrowseTrigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (el.imgFileInput) el.imgFileInput.click();
+    });
+  }
+
+  // Drop zone click → open file picker
+  if (el.imgDropZone) {
+    el.imgDropZone.addEventListener("click", () => {
+      if (el.imgFileInput) el.imgFileInput.click();
+    });
+
+    // Drag and drop
+    el.imgDropZone.addEventListener("dragover", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.imgDropZone.classList.add("drag-over");
+    });
+    el.imgDropZone.addEventListener("dragleave", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.imgDropZone.classList.remove("drag-over");
+    });
+    el.imgDropZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      el.imgDropZone.classList.remove("drag-over");
+      const file = e.dataTransfer.files[0];
+      if (file) handleDeviceImageFile(file);
+    });
+  }
+
+  // File input change
+  if (el.imgFileInput) {
+    el.imgFileInput.addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (file) handleDeviceImageFile(file);
+    });
+  }
+
+  // Remove device preview
+  if (el.imgDeviceRemove) {
+    el.imgDeviceRemove.addEventListener("click", () => {
+      clearDevicePreview();
+      if (el.imgFileInput) el.imgFileInput.value = "";
+    });
+  }
+
+  // URL load button
+  if (el.imgUrlLoad) {
+    el.imgUrlLoad.addEventListener("click", handleUrlImageLoad);
+  }
+
+  // URL input Enter key
+  if (el.imgUrlInput) {
+    el.imgUrlInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        handleUrlImageLoad();
+      }
+    });
+  }
+
+  // Remove URL preview
+  if (el.imgUrlRemove) {
+    el.imgUrlRemove.addEventListener("click", clearUrlPreview);
+  }
+
+  // Cancel button
+  if (el.imgCancelBtn) {
+    el.imgCancelBtn.addEventListener("click", closeImageInsertModal);
+  }
+
+  // Insert button
+  if (el.imgInsertBtn) {
+    el.imgInsertBtn.addEventListener("click", insertPendingImage);
+  }
+
+  // Click backdrop to close
+  if (el.imageInsertModal) {
+    el.imageInsertModal.addEventListener("click", (e) => {
+      if (e.target === el.imageInsertModal) closeImageInsertModal();
+    });
+  }
+
+  // Escape key to close
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && el.imageInsertModal && !el.imageInsertModal.hidden) {
+      closeImageInsertModal();
+    }
+  });
+
+  // Override Quill's default image handler to open our modal
+  if (quill) {
+    const toolbar = quill.getModule("toolbar");
+    if (toolbar) {
+      toolbar.addHandler("image", () => {
+        openImageInsertModal();
+      });
+    }
+  }
+}
+
+bindImageModalEvents();
+
+// ==========================================================================
+//   Word-Style Image Resize Handles
+// ==========================================================================
+let selectedImg = null;
+let resizeOverlay = null;
+
+function removeImageResizeHandles() {
+  if (resizeOverlay) {
+    resizeOverlay.remove();
+    resizeOverlay = null;
+  }
+  if (selectedImg) {
+    selectedImg.classList.remove("img-selected");
+    selectedImg = null;
+  }
+}
+
+function getResizeContainer() {
+  // Use the word-page-sheet as the container (it has position: relative)
+  return el.wordPageSheet || document.getElementById("word-page-sheet");
+}
+
+function createResizeHandles(img) {
+  removeImageResizeHandles();
+  selectedImg = img;
+  img.classList.add("img-selected");
+
+  const container = getResizeContainer();
+  if (!container) return;
+
+  // Create overlay positioned over the image
+  resizeOverlay = document.createElement("div");
+  resizeOverlay.className = "img-resize-wrapper";
+  resizeOverlay.setAttribute("contenteditable", "false");
+
+  updateOverlayPosition();
+
+  // Create 8 handles
+  const dirs = ["nw", "n", "ne", "w", "e", "sw", "s", "se"];
+  dirs.forEach((dir) => {
+    const handle = document.createElement("div");
+    handle.className = `img-resize-handle ${dir}`;
+    handle.setAttribute("contenteditable", "false");
+    handle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      startResize(e, dir);
+    });
+    resizeOverlay.appendChild(handle);
+  });
+
+  // Size tooltip
+  const tooltip = document.createElement("div");
+  tooltip.className = "img-resize-tooltip";
+  tooltip.textContent = `${Math.round(img.offsetWidth)} × ${Math.round(img.offsetHeight)}`;
+  resizeOverlay.appendChild(tooltip);
+
+  container.appendChild(resizeOverlay);
+}
+
+function updateOverlayPosition() {
+  if (!resizeOverlay || !selectedImg) return;
+  const container = getResizeContainer();
+  if (!container) return;
+
+  const containerRect = container.getBoundingClientRect();
+  const imgRect = selectedImg.getBoundingClientRect();
+
+  resizeOverlay.style.top = (imgRect.top - containerRect.top + container.scrollTop) + "px";
+  resizeOverlay.style.left = (imgRect.left - containerRect.left + container.scrollLeft) + "px";
+  resizeOverlay.style.width = imgRect.width + "px";
+  resizeOverlay.style.height = imgRect.height + "px";
+}
+
+function startResize(e, dir) {
+  if (!selectedImg) return;
+
+  const img = selectedImg;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const startW = img.offsetWidth;
+  const startH = img.offsetHeight;
+  const aspect = startW / (startH || 1);
+  const isCorner = dir === "nw" || dir === "ne" || dir === "sw" || dir === "se";
+
+  // Prevent text selection while dragging
+  const origUserSelect = document.body.style.userSelect;
+  document.body.style.userSelect = "none";
+  document.body.style.cursor = dir + "-resize";
+
+  function onMouseMove(ev) {
+    ev.preventDefault();
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    let newW = startW;
+    let newH = startH;
+
+    if (dir.includes("e")) newW = startW + dx;
+    if (dir.includes("w")) newW = startW - dx;
+    if (dir.includes("s")) newH = startH + dy;
+    if (dir.includes("n")) newH = startH - dy;
+
+    // Minimum size
+    newW = Math.max(20, newW);
+    newH = Math.max(20, newH);
+
+    // Lock aspect ratio for corner handles
+    if (isCorner) {
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        newH = Math.round(newW / aspect);
+      } else {
+        newW = Math.round(newH * aspect);
+      }
+      newW = Math.max(20, newW);
+      newH = Math.max(20, newH);
+    }
+
+    // Apply size directly to the img element
+    img.style.width = newW + "px";
+    img.style.height = newH + "px";
+    img.setAttribute("width", String(Math.round(newW)));
+    img.setAttribute("height", String(Math.round(newH)));
+
+    // Update overlay
+    requestAnimationFrame(() => {
+      updateOverlayPosition();
+      // Update tooltip
+      const tooltip = resizeOverlay ? resizeOverlay.querySelector(".img-resize-tooltip") : null;
+      if (tooltip) {
+        tooltip.textContent = `${Math.round(newW)} × ${Math.round(newH)}`;
+      }
+    });
+  }
+
+  function onMouseUp() {
+    document.removeEventListener("mousemove", onMouseMove);
+    document.removeEventListener("mouseup", onMouseUp);
+    document.body.style.userSelect = origUserSelect;
+    document.body.style.cursor = "";
+
+    // Mark editor dirty
+    if (state.editor) {
+      state.editor.dirty = true;
+      updateEditorChrome();
+    }
+
+    // Final position update
+    requestAnimationFrame(updateOverlayPosition);
+  }
+
+  document.addEventListener("mousemove", onMouseMove);
+  document.addEventListener("mouseup", onMouseUp);
+}
+
+// Detect clicks on images inside the Quill editor
+// We use 'click' on the document since Quill intercepts mousedown
+document.addEventListener("click", (e) => {
+  if (!state.editor || !state.editor.active) return;
+
+  // Did user click on an image inside the editor?
+  const img = e.target.closest && e.target.closest("#editor-content .ql-editor img");
+  if (img) {
+    e.preventDefault();
+    e.stopPropagation();
+    createResizeHandles(img);
+    return;
+  }
+
+  // Did user click on a resize handle? Don't deselect.
+  if (e.target.closest && e.target.closest(".img-resize-handle")) {
+    return;
+  }
+  if (e.target.closest && e.target.closest(".img-resize-wrapper")) {
+    return;
+  }
+
+  // Clicked elsewhere — deselect
+  if (selectedImg) {
+    removeImageResizeHandles();
+  }
+}, true); // Use capture phase to get events before Quill
+
+// Also handle mousedown on images (for immediate visual feedback)
+document.addEventListener("mousedown", (e) => {
+  if (!state.editor || !state.editor.active) return;
+  const img = e.target.closest && e.target.closest("#editor-content .ql-editor img");
+  if (img) {
+    // Don't prevent default here — let click event handle selection
+    // But stop Quill from changing selection
+    setTimeout(() => {
+      createResizeHandles(img);
+    }, 0);
+  }
+}, true);
+
+// Reposition handles on scroll
+(function() {
+  const workspace = document.getElementById("word-workspace");
+  if (workspace) {
+    workspace.addEventListener("scroll", () => {
+      if (selectedImg && resizeOverlay) {
+        requestAnimationFrame(updateOverlayPosition);
+      }
+    });
+  }
+})();
+
+// Keyboard: Escape to deselect, Delete/Backspace to remove image
+window.addEventListener("keydown", (e) => {
+  if (!selectedImg) return;
+
+  if (e.key === "Escape") {
+    removeImageResizeHandles();
+    return;
+  }
+
+  if ((e.key === "Delete" || e.key === "Backspace") && state.editor.active) {
+    e.preventDefault();
+    const img = selectedImg;
+    removeImageResizeHandles();
+    // Remove the image from Quill
+    if (quill && typeof Quill !== "undefined") {
+      try {
+        const blot = Quill.find(img);
+        if (blot) {
+          const index = quill.getIndex(blot);
+          quill.deleteText(index, 1, "user");
+        }
+      } catch {
+        // Fallback: just remove from DOM
+        img.remove();
+      }
+    }
+  }
+});
+
+// ==========================================================================
+//   Unsaved Changes Warning on App Close
+// ==========================================================================
+function hasAnyUnsavedWork() {
+  // Check active editor
+  if (state.editor.active && state.editor.dirty) return true;
+  // Check modified PDF
+  if (state.pdfModified) return true;
+  // Check all tabs for dirty state
+  for (const tab of tabs) {
+    if (tab.type === "editor" && tab.editor?.dirty) return true;
+    if (tab.dirty) return true;
+  }
+  return false;
+}
+
+function getUnsavedDocumentName() {
+  if (state.editor.active && state.editor.dirty) {
+    return state.editor.fileName || "Document1";
+  }
+  const dirtyTab = tabs.find(t => 
+    (t.type === "editor" && (t.editor?.dirty || (t.id === activeTabId && state.editor.dirty))) ||
+    t.dirty
+  );
+  return dirtyTab ? dirtyTab.name : "Document1";
+}
+
+function showUnsavedWarningModal() {
+  if (!el.unsavedWarningModal) {
+    // Fallback: no modal, just close
+    if (window.pdfViewer?.confirmClose) window.pdfViewer.confirmClose("close");
+    return;
+  }
+  if (el.unsavedDocName) el.unsavedDocName.textContent = getUnsavedDocumentName();
+  el.unsavedWarningModal.hidden = false;
+}
+
+function hideUnsavedWarningModal() {
+  if (el.unsavedWarningModal) el.unsavedWarningModal.hidden = true;
+}
+
+// Bind unsaved warning modal events
+if (el.unsavedBtnCancel) {
+  el.unsavedBtnCancel.addEventListener("click", () => {
+    hideUnsavedWarningModal();
+    // Tell main process user cancelled
+    if (window.pdfViewer?.confirmClose) window.pdfViewer.confirmClose("cancel");
+  });
+}
+
+if (el.unsavedBtnDiscard) {
+  el.unsavedBtnDiscard.addEventListener("click", () => {
+    hideUnsavedWarningModal();
+    // Clear all dirty flags so beforeunload does not block closing
+    state.editor.dirty = false;
+    tabs.forEach((t) => {
+      t.dirty = false;
+      if (t.editor) t.editor.dirty = false;
+    });
+    // Don't save, just close
+    if (window.pdfViewer?.confirmClose) window.pdfViewer.confirmClose("close");
+  });
+}
+
+if (el.unsavedBtnSave) {
+  el.unsavedBtnSave.addEventListener("click", async () => {
+    hideUnsavedWarningModal();
+    // Try to save first, then close
+    try {
+      await savePdf();
+      state.editor.dirty = false;
+      tabs.forEach((t) => {
+        t.dirty = false;
+        if (t.editor) t.editor.dirty = false;
+      });
+      // After save, close the app
+      if (window.pdfViewer?.confirmClose) window.pdfViewer.confirmClose("close");
+    } catch {
+      // Save failed or cancelled, don't close
+      showToast("Save was cancelled. Your document is still open.", "info");
+    }
+  });
+}
+
+// Listen for close request from main process
+if (window.pdfViewer?.onCloseRequested) {
+  window.pdfViewer.onCloseRequested(() => {
+    if (hasAnyUnsavedWork()) {
+      showUnsavedWarningModal();
+    } else {
+      // No unsaved work, close immediately
+      if (window.pdfViewer?.confirmClose) window.pdfViewer.confirmClose("close");
+    }
+  });
+}
+
+// Also add beforeunload as a safety net
+window.addEventListener("beforeunload", (e) => {
+  if (hasAnyUnsavedWork()) {
+    e.preventDefault();
+    e.returnValue = "";
+  }
+});
 
 function editorHasContent() {
   if (!quill) return false;
@@ -917,6 +1642,14 @@ function applyEditorFontSize() {
   if (quill && state.editor.options && el.editorContent) {
     const editable = el.editorContent.querySelector(".ql-editor");
     if (editable) editable.style.fontSize = `${state.editor.options.fontSize}pt`;
+  }
+}
+
+function applyEditorLineSpacing() {
+  if (state.editor?.options && el.editorContent) {
+    const spacing = state.editor.options.lineSpacing || 1.15;
+    const editable = el.editorContent.querySelector(".ql-editor");
+    if (editable) editable.style.lineHeight = String(spacing);
   }
 }
 
@@ -1924,7 +2657,7 @@ function defaultPdfOptions() {
   return {
     pageSize: "a4",
     fontSize: 11,
-    lineSpacing: 1.45,
+    lineSpacing: 1.15,
     margin: 56,
     pageNumbers: true,
     title: "",
@@ -1973,11 +2706,55 @@ function syncOptionsToFields() {
   const o = state.editor.options;
   el.optPaperSize.value = o.pageSize === "letter" ? "letter" : "a4";
   el.optFontSize.value = String(o.fontSize);
-  el.optLineSpacing.value = String(o.lineSpacing);
+
+  // Sync Line Spacing to both Layout Drawer and Ribbon Dropdown
+  const spacingVal = Number(o.lineSpacing) || 1.15;
+  const spacingStr = String(spacingVal);
+
+  if (el.optLineSpacing) {
+    let match = Array.from(el.optLineSpacing.options).find(
+      (opt) => opt.value === spacingStr || Math.abs(Number(opt.value) - spacingVal) < 0.01
+    );
+    if (!match) {
+      const newOpt = document.createElement("option");
+      newOpt.value = spacingStr;
+      newOpt.textContent = `${spacingStr} (Custom)`;
+      el.optLineSpacing.appendChild(newOpt);
+      match = newOpt;
+    }
+    el.optLineSpacing.value = match.value;
+  }
+
+  if (el.ribbonLineSpacing) {
+    let match = Array.from(el.ribbonLineSpacing.options).find(
+      (opt) => opt.value === spacingStr || Math.abs(Number(opt.value) - spacingVal) < 0.01
+    );
+    if (!match) {
+      const newOpt = document.createElement("option");
+      newOpt.value = spacingStr;
+      newOpt.textContent = spacingStr;
+      el.ribbonLineSpacing.appendChild(newOpt);
+      match = newOpt;
+    }
+    el.ribbonLineSpacing.value = match.value;
+    const picker = el.ribbonLineSpacing.previousElementSibling;
+    if (picker && picker.classList.contains("ql-picker")) {
+      const label = picker.querySelector(".ql-picker-label");
+      if (label) {
+        label.setAttribute("data-value", match.value);
+        label.setAttribute("data-label", match.textContent || match.value);
+      }
+      picker.querySelectorAll(".ql-picker-item").forEach((item) => {
+        item.classList.toggle("ql-selected", item.getAttribute("data-value") === match.value);
+      });
+    }
+  }
+
   el.optMargin.value = String(o.margin);
   el.optPageNumbers.checked = !!o.pageNumbers;
   el.optAuthor.value = o.author || "";
   applyEditorFontSize();
+  applyEditorLineSpacing();
   applyEditorSheetLayout();
 }
 
@@ -1985,11 +2762,15 @@ function syncOptionsFromFields() {
   const o = state.editor.options;
   o.pageSize = el.optPaperSize.value === "letter" ? "letter" : "a4";
   o.fontSize = Number(el.optFontSize.value) || 11;
-  o.lineSpacing = Number(el.optLineSpacing.value) || 1.45;
+  o.lineSpacing = Number(el.optLineSpacing.value) || 1.15;
+  if (el.ribbonLineSpacing) {
+    el.ribbonLineSpacing.value = String(o.lineSpacing);
+  }
   o.margin = Number(el.optMargin.value) || 56;
   o.pageNumbers = el.optPageNumbers.checked;
   o.title = el.optTitle.value.trim();
   o.author = el.optAuthor.value.trim();
+  applyEditorLineSpacing();
   applyEditorSheetLayout();
   persistPdfOptions();
 }
@@ -2012,6 +2793,7 @@ function openTextEditor({ html = "", text = "", fileName = "Document1", source =
   el.errorState.hidden = true;
   el.emptyState.hidden = true;
   el.editorView.hidden = false;
+  if (el.toolbar) el.toolbar.hidden = true;
   editorBusy = true;
   if (html) {
     quill.clipboard.dangerouslyPasteHTML(html);
@@ -2063,6 +2845,7 @@ function exitEditor() {
   state.editor.saving = false;
   state.editor.source = null;
   el.editorView.hidden = true;
+  if (el.toolbar) el.toolbar.hidden = false;
   setEditorStatus("");
   const currentTab = tabs.find((t) => t.id === activeTabId);
   if (currentTab) {
@@ -3070,15 +3853,16 @@ function bindEvents() {
   }
   if (el.ribbonLineSpacing) {
     el.ribbonLineSpacing.addEventListener("change", () => {
-      const spacing = el.ribbonLineSpacing.value;
-      if (el.editorContent) {
-        const qlEditor = el.editorContent.querySelector(".ql-editor");
-        if (qlEditor) qlEditor.style.lineHeight = spacing;
-      }
+      const spacing = parseFloat(el.ribbonLineSpacing.value) || 1.15;
       if (state.editor.options) {
-        state.editor.options.lineSpacing = parseFloat(spacing) || 1.15;
-        if (el.optLineSpacing) el.optLineSpacing.value = spacing;
+        state.editor.options.lineSpacing = spacing;
+        if (el.optLineSpacing) el.optLineSpacing.value = String(spacing);
         persistPdfOptions();
+      }
+      applyEditorLineSpacing();
+      if (state.editor.active) {
+        state.editor.dirty = true;
+        updateEditorChrome();
       }
     });
   }

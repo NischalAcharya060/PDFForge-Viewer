@@ -27,4 +27,7 @@ contextBridge.exposeInMainWorld("pdfViewer", {
   getAppInfo: () => ipcRenderer.invoke("app:get-info"),
   onOpenFile: subscribe("open-file"),
   onCommand: subscribe("menu:command"),
+  // Close confirmation flow
+  onCloseRequested: subscribe("app:close-requested"),
+  confirmClose: (action) => ipcRenderer.invoke("app:confirm-close", action),
 });
