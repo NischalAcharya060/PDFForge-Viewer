@@ -140,6 +140,17 @@ app.whenReady().then(async () => {
   await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-viewer.png"), img.toPNG());
   console.log("Saved current-viewer.png");
 
+  // Open Print Preview in Dark Theme
+  await win.webContents.executeJavaScript("document.getElementById('btn-print').click()");
+  await new Promise((r) => setTimeout(r, 1000));
+  img = await win.capturePage();
+  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-print-preview-dark.png"), img.toPNG());
+  console.log("Saved current-print-preview-dark.png");
+
+  // Close Print Preview
+  await win.webContents.executeJavaScript("document.getElementById('btn-print-preview-close').click()");
+  await new Promise((r) => setTimeout(r, 400));
+
   // Open Word Editor
   await win.webContents.executeJavaScript("document.getElementById('btn-new').click()");
   await new Promise((r) => setTimeout(r, 1000));
@@ -154,6 +165,27 @@ app.whenReady().then(async () => {
     document.body.offsetHeight;
   `);
   await new Promise((r) => setTimeout(r, 600));
+
+  // Open Print Preview in Light Theme (from Word Editor)
+  await win.webContents.executeJavaScript(`
+    if (window.__quill) {
+      window.__quill.setText("Modern System App - Print Preview\\n\\nPDFForge Viewer delivers pixel-perfect document rendering, Microsoft Store ready design system, and unified print preview support for both PDF documents and Word editor documents.");
+    }
+    const printBtn = document.getElementById('btn-print');
+    if (printBtn) {
+      printBtn.disabled = false;
+      printBtn.click();
+    }
+  `);
+  await new Promise((r) => setTimeout(r, 1000));
+  img = await win.capturePage();
+  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-print-preview-light.png"), img.toPNG());
+  console.log("Saved current-print-preview-light.png");
+
+  // Close Print Preview
+  await win.webContents.executeJavaScript("document.getElementById('btn-print-preview-close').click()");
+  await new Promise((r) => setTimeout(r, 400));
+
   img = await win.capturePage();
   await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-light-editor.png"), img.toPNG());
   console.log("Saved current-light-editor.png");
@@ -179,4 +211,7 @@ app.whenReady().then(async () => {
   console.log("Saved current-light-home.png");
 
   app.exit(0);
+}).catch((err) => {
+  console.error("Capture script error:", err);
+  app.exit(1);
 });

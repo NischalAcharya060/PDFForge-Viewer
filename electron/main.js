@@ -417,6 +417,22 @@ async function runSmoke() {
 
     await mainWindow.webContents.executeJavaScript("document.getElementById('btn-properties-close').click();");
 
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-print').click();");
+    const printPreviewOk = await poll(
+      () =>
+        mainWindow.webContents.executeJavaScript(
+          "!document.getElementById('print-preview-modal').hidden && " +
+            "Boolean(document.getElementById('btn-print-confirm')) && " +
+            "Boolean(document.getElementById('btn-print-cancel')) && " +
+            "Boolean(document.getElementById('print-pages-select'))"
+        ),
+      5000
+    );
+    console.log("[smoke] print preview modal opened:", Boolean(printPreviewOk));
+    if (!printPreviewOk) throw new Error("Print preview modal did not open or populate");
+
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-print-preview-close').click();");
+
     console.log("[smoke] PASS");
     app.exit(0);
   } catch (err) {
