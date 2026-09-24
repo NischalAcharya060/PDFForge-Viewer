@@ -155,6 +155,9 @@ export function layoutPages() {
     if (p.textDiv) {
       p.textDiv.textContent = "";
     }
+    if (p.autoLinkDiv) {
+      p.autoLinkDiv.textContent = "";
+    }
     if (p.annotDiv) {
       p.annotDiv.textContent = "";
     }
@@ -390,9 +393,81 @@ export async function renderTextLayerForPage(p, key) {
         active.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
       }
     }
+    linkifyTextLayer(p);
   } catch (err) {
     if (err && err.name === "AbortException") return;
     // ignore
+  }
+}
+
+const EMAIL_SOURCE = "[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}";
+const PHONE_SOURCE = "(?:\\+?\\d{1,3}[\\s-]?)?(?:\\(\\d{1,4}\\)[\\s-]?)?\\d{2,4}(?:[\\s.-]\\d{2,4}){1,2}";
+const AUTO_LINK_RE = new RegExp(`(?:(?<![\\w.+-])${EMAIL_SOURCE}(?![\\w.-]))|(?:(?<![\\d(])${PHONE_SOURCE}(?!\\d))`, "g");
+
+function isPhoneCandidate(str) {
+  const digits = str.replace(/\D/g, "");
+  if (digits.length < 7 || digits.length > 15) return false;
+  if (str.startsWith("+") && digits.length < 8) return false;
+  return true;
+}
+
+/**
+ * Detect email addresses and phone numbers in the rendered text layer and
+ * overlay them with clickable mailto:/tel: links.
+ */
+function linkifyTextLayer(p) {
+  if (!p || !p.textDiv) return;
+  if (!p.autoLinkDiv) {
+    p.autoLinkDiv = document.createElement("div");
+    p.autoLinkDiv.className = "auto-link-layer";
+    p.div.appendChild(p.autoLinkDiv);
+  }
+  p.autoLinkDiv.textContent = "";
+
+  const pageRect = p.div.getBoundingClientRect();
+  const walker = document.createTreeWalker(p.textDiv, NodeFilter.SHOW_TEXT, null);
+  const textNodes = [];
+  let node;
+  while ((node = walker.nextNode())) {
+    if (node.nodeValue && node.nodeValue.trim()) textNodes.push(node);
+  }
+
+  for (const textNode of textNodes) {
+    AUTO_LINK_RE.lastIndex = 0;
+    const text = textNode.nodeValue;
+    let m;
+    while ((m = AUTO_LINK_RE.exec(text))) {
+      const raw = m[0];
+      const isEmail = /@/.test(raw);
+      if (!isEmail && !isPhoneCandidate(raw)) continue;
+      const href = isEmail ? `mailto:${raw}` : `tel:${raw.replace(/[^\d+]/g, "")}`;
+      try {
+        const range = document.createRange();
+        range.setStart(textNode, m.index);
+        range.setEnd(textNode, m.index + raw.length);
+        const rects = range.getClientRects();
+        for (const rect of rects) {
+          if (!rect || (rect.width === 0 && rect.height === 0)) continue;
+          const a = document.createElement("a");
+          a.className = isEmail ? "auto-link is-email" : "auto-link is-phone";
+          a.href = href;
+          a.dataset.href = href;
+          a.title = isEmail ? `Email ${raw}` : `Call ${raw}`;
+          a.style.left = `${Math.round(rect.left - pageRect.left)}px`;
+          a.style.top = `${Math.round(rect.top - pageRect.top)}px`;
+          a.style.width = `${Math.round(rect.width)}px`;
+          a.style.height = `${Math.round(rect.height)}px`;
+          a.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            window.open(href, "_blank");
+          });
+          p.autoLinkDiv.appendChild(a);
+        }
+      } catch {
+        // range or rect unavailable
+      }
+    }
   }
 }
 

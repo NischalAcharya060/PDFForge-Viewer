@@ -119,7 +119,7 @@ function createWindow() {
   win.setMenuBarVisibility(true);
 
   win.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:/.test(url)) shell.openExternal(url);
+    if (/^(https?:|mailto:|tel:)/i.test(url)) shell.openExternal(url);
     return { action: "deny" };
   });
 
