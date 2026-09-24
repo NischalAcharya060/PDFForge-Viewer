@@ -198,6 +198,16 @@ function getIconPreferences() {
 }
 
 /**
+ * Deep link to this app's own page inside Windows Default apps settings.
+ * Falls back to the generic Default apps list on older Windows builds
+ * (query param requires Windows 11 21H2+ with 2023-04 update or later).
+ */
+function defaultAppsAppPageUri() {
+  const appName = encodeURIComponent("PDFForge Viewer");
+  return `ms-settings:defaultapps?registeredAppUser=${appName}`;
+}
+
+/**
  * Register file associations in HKCU registry and open Windows Default Apps settings
  */
 async function registerAsDefault() {
@@ -239,11 +249,11 @@ async function registerAsDefault() {
 
   await notifyShellChange();
 
-  // Open Windows default apps page for user confirmation
+  // Open this app's page inside Windows Default apps so the user only has to click "Set as default"
   try {
-    await shell.openExternal("ms-settings:defaultapps");
+    await shell.openExternal(defaultAppsAppPageUri());
   } catch (err) {
-    console.warn("Could not open ms-settings:defaultapps:", err);
+    console.warn("Could not open app Default apps page:", err);
   }
 
   const status = await checkDefaultStatus();
@@ -340,7 +350,7 @@ async function chooseCustomIconDialog(mainWindow) {
  */
 async function openDefaultAppsSettings() {
   if (process.platform === "win32") {
-    return shell.openExternal("ms-settings:defaultapps");
+    return shell.openExternal(defaultAppsAppPageUri());
   }
   return false;
 }

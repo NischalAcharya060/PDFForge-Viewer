@@ -95,8 +95,8 @@
           </svg>
         </button>
         <div class="page-nav-box" title="Page navigation">
-          <input type="number" id="page-jump-input" min="1" value="1" title="Type page number and press Enter" disabled />
-          <span id="page-indicator">— of —</span>
+          <input type="number" id="page-jump-input" min="1" value="1" title="Go to page" aria-label="Go to page number" disabled />
+          <span id="page-indicator" aria-live="polite">— of —</span>
         </div>
         <button id="btn-next" class="icon-btn" title="Next page (→)" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -613,6 +613,7 @@
           <div class="shortcut-row"><span class="shortcut-desc">Rotate Clockwise</span><span><kbd>Ctrl</kbd> + <kbd>R</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Zoom In / Out</span><span><kbd>Ctrl</kbd> + <kbd>+</kbd> / <kbd>-</kbd> or <kbd>Ctrl+Wheel</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Actual Size (100%)</span><span><kbd>Ctrl</kbd> + <kbd>0</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Go to Page</span><span><kbd>Ctrl</kbd> + <kbd>G</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Previous / Next Page</span><span><kbd>←</kbd> / <kbd>→</kbd> or <kbd>PgUp</kbd> / <kbd>PgDn</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">First / Last Page</span><span><kbd>Home</kbd> / <kbd>End</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Toggle Sidebar</span><span><kbd>T</kbd></span></div>

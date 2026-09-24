@@ -218,7 +218,7 @@ export async function handleSetAsDefault() {
   try {
     const res = await window.pdfViewer.setAsDefaultPdfViewer();
     if (res?.success) {
-      showToast("Registered as PDF reader! Confirm in Windows Settings if prompted.", "success");
+      showToast("Registered as PDF reader! Click \"Set as default\" on the Windows page that opened.", "success");
     } else {
       showToast(res?.message || "Failed to register file association.", "error");
     }

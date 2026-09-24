@@ -353,11 +353,17 @@ function bindEvents() {
       }
     };
     el.pageJumpInput.addEventListener("focus", () => el.pageJumpInput.select());
+    el.pageJumpInput.addEventListener("input", () => {
+      const val = parseInt(el.pageJumpInput.value, 10);
+      if (Number.isInteger(val) && val >= 1 && val <= state.pages.length) {
+        scrollToPage(val - 1);
+      }
+    });
     el.pageJumpInput.addEventListener("keydown", (e) => {
       if (e.key === "Enter") {
         e.preventDefault();
         handleJump();
-        el.pageHost.focus();
+        el.pageJumpInput.blur();
       } else if (e.key === "Escape") {
         el.pageJumpInput.value = String(state.currentPage);
         el.pageHost.focus();
@@ -556,6 +562,15 @@ function bindEvents() {
           updateDocZoom();
         } else {
           actualSize();
+        }
+        return;
+      }
+      if (k === "g") {
+        if (state.editor.active) return;
+        e.preventDefault();
+        if (el.pageJumpInput && !el.pageJumpInput.disabled) {
+          el.pageJumpInput.focus();
+          el.pageJumpInput.select();
         }
         return;
       }

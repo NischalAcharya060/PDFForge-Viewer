@@ -65,6 +65,7 @@ export function updateControls() {
     el.pageJumpInput.disabled = !hasDoc;
     el.pageJumpInput.max = String(hasDoc ? state.pages.length : 1);
     el.pageJumpInput.value = String(hasDoc ? state.currentPage : 1);
+    el.pageJumpInput.title = hasDoc ? `Go to page (1 – ${state.pages.length})` : "Go to page";
   }
   if (el.pageIndicator) {
     if (!hasDoc) {

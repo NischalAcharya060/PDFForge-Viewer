@@ -205,7 +205,7 @@ function buildMenu() {
         },
         { type: "separator" },
         {
-          label: "File Associations & Icons…",
+          label: "Preferences…",
           accelerator: "CmdOrCtrl+,",
           click: () => send("preferences"),
         },
