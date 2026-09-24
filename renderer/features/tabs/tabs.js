@@ -242,6 +242,7 @@ export function snapshotCurrentTab() {
       currentTab.data = (state.data instanceof Uint8Array ? state.data : new Uint8Array(state.data)).slice();
     }
     currentTab.doc = state.doc || currentTab.doc;
+    currentTab.loadingTask = state.loadingTask || currentTab.loadingTask;
     currentTab.pages = state.pages || currentTab.pages;
     currentTab.outline = state.outline || currentTab.outline;
     currentTab.currentPage = state.currentPage || 1;
@@ -290,7 +291,14 @@ export function restoreTab(tab) {
     el.emptyState.hidden = true;
     el.errorState.hidden = true;
 
+    // Self-healing fallback: if doc was somehow destroyed or lost, reload cleanly from data
+    if ((!tab.doc || tab.doc.destroyed) && tab.data) {
+      void openDocument(tab.data, tab.name, tab.filePath);
+      return;
+    }
+
     state.doc = tab.doc;
+    state.loadingTask = tab.loadingTask || null;
     state.name = tab.name;
     state.filePath = tab.filePath;
     state.data = tab.data;
@@ -306,11 +314,17 @@ export function restoreTab(tab) {
     if (typeof tab.sidebarVisible === "boolean") {
       setThumbsVisible(tab.sidebarVisible);
     }
-    if (el.thumbnails) {
-      el.thumbnails.hidden = !thumbsVisible;
-    }
-    if (el.btnThumbs) {
-      el.btnThumbs.classList.toggle("active", thumbsVisible);
+    applyThumbnails();
+
+    // Reset rendering flags on page objects so they render freshly
+    for (const p of state.pages) {
+      p.pageRendering = false;
+      p.rendered = false;
+      p.renderKey = 0;
+      if (p.prevTask) {
+        try { p.prevTask.cancel(); } catch {}
+        p.prevTask = null;
+      }
     }
 
     // Restore pages into pageHost
@@ -338,7 +352,6 @@ export function restoreTab(tab) {
         for (const p of state.pages) {
           if (p.thumbDiv) el.thumbList.appendChild(p.thumbDiv);
         }
-        applyThumbnails();
         queueThumbRenders();
       } else if (state.doc) {
         buildThumbnails();
@@ -358,6 +371,8 @@ export function restoreTab(tab) {
       }
     }
 
+    // Recalculate layout and trigger rendering for visible pages
+    layoutPages();
     updateZoomSelect();
     syncFitButtons();
     updateControls();
@@ -366,7 +381,6 @@ export function restoreTab(tab) {
     if (tab.scrollTop && el.pageHost) {
       el.pageHost.scrollTo({ top: tab.scrollTop, left: tab.scrollLeft || 0 });
     }
-    queueVisibleRender();
   } else {
     state.editor.active = false;
     state.editor.dirty = false;
@@ -442,6 +456,12 @@ export async function closeTab(tabId) {
     } catch {}
     tab.doc = null;
     tab.pages = [];
+  }
+  if (tab.loadingTask) {
+    try {
+      await tab.loadingTask.destroy();
+    } catch {}
+    tab.loadingTask = null;
   }
 
   if (splitTabId === tabId) {

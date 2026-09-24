@@ -5,7 +5,7 @@ import { getDocument } from '../../pdfjs/pdf.mjs';
 import { clamp } from '../../utils/helpers.js';
 import { highlightPage } from '../search/search.js';
 import { showToast } from '../../components/toast.js';
-import { updateActiveThumb, thumbsVisible, applyThumbnails, queueThumbRenders, buildThumbnails, buildOutline } from '../thumbnails/thumbnails.js';
+import { updateActiveThumb, updateThumbFromPageCanvas, thumbsVisible, applyThumbnails, queueThumbRenders, buildThumbnails, buildOutline } from '../thumbnails/thumbnails.js';
 import { setLoading, openDocument } from '../../services/document-service.js';
 
 export function availableSpace() {
@@ -228,8 +228,8 @@ export async function pumpRender() {
       const p = state.renderQueue.shift();
       await renderPage(p);
     }
-  } catch {
-    // keep going
+  } catch (err) {
+    console.error("[PUMP-RENDER-ERROR]", err);
   } finally {
     state.renderBusy = false;
   }
@@ -266,11 +266,13 @@ export async function renderPage(p) {
     } catch {
       // ignore
     }
+    p.prevTask = null;
   }
+
   const ctx = p.canvas.getContext("2d");
-  const task = p.page.render({ canvasContext: ctx, viewport });
-  p.prevTask = task;
   try {
+    const task = p.page.render({ canvasContext: ctx, viewport });
+    p.prevTask = task;
     await task.promise;
     if (key === p.renderKey) {
       p.rendered = true;

@@ -20,6 +20,7 @@ export async function destroyDocument() {
       } catch {
         // ignore
       }
+      p.prevTask = null;
     }
     if (p.textTask) {
       try {
@@ -27,29 +28,40 @@ export async function destroyDocument() {
       } catch {
         // ignore
       }
+      p.textTask = null;
     }
+    if (p.thumbTask) {
+      try {
+        p.thumbTask.cancel();
+      } catch {
+        // ignore
+      }
+      p.thumbTask = null;
+    }
+    p.pageRendering = false;
   }
   state.pages = [];
   state.outline = [];
   el.pageHost.textContent = "";
   el.thumbList.textContent = "";
   el.outlineList.textContent = "";
-  if (state.loadingTask) {
+
+  const taskInOtherTab = Array.isArray(tabs) && tabs.some((t) => t.id !== activeTabId && (t.loadingTask === state.loadingTask || t.doc === state.doc));
+  if (state.loadingTask && !taskInOtherTab) {
     try {
       await state.loadingTask.destroy();
     } catch {
       // ignore
     }
-    state.loadingTask = null;
   }
-  if (state.doc) {
-    const docInOtherTab = Array.isArray(tabs) && tabs.some((t) => t.id !== activeTabId && t.doc === state.doc);
-    if (!docInOtherTab) {
-      try {
-        await state.doc.destroy();
-      } catch {
-        // ignore
-      }
+  state.loadingTask = null;
+
+  const docInOtherTab = Array.isArray(tabs) && tabs.some((t) => t.id !== activeTabId && t.doc === state.doc);
+  if (state.doc && !docInOtherTab) {
+    try {
+      await state.doc.destroy();
+    } catch {
+      // ignore
     }
   }
   state.doc = null;
@@ -142,6 +154,7 @@ export async function openDocument(data, name, filePath) {
       currentTab.filePath = filePath;
       currentTab.data = state.data;
       currentTab.doc = state.doc;
+      currentTab.loadingTask = state.loadingTask;
       currentTab.pages = state.pages;
       currentTab.outline = state.outline;
     }
@@ -153,7 +166,6 @@ export async function openDocument(data, name, filePath) {
     updateControls();
     updateActiveThumb();
     el.pageHost.scrollTo({ top: 0 });
-    state.renderSeq++;
   } catch (err) {
     if (err && err.name === "PasswordException") {
       showPasswordModal("This PDF requires a password to open.");

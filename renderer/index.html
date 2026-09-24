@@ -43,14 +43,12 @@
 
     <header id="toolbar">
       <div class="toolbar-group left">
-        <div class="app-brand" title="PDFForge Viewer">
-          <svg viewBox="0 0 24 24" fill="none" class="brand-icon">
-            <rect width="24" height="24" rx="6" fill="#e5484d" />
-            <path d="M7 6h6l4 4v8a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1z" fill="#fff" opacity="0.95" />
-            <path d="M13 6v4h4" fill="#e5484d" opacity="0.4" />
-            <text x="8" y="16" font-size="6" font-weight="900" fill="#e5484d" font-family="system-ui">PDF</text>
+        <button id="btn-thumbs" class="icon-btn" title="Toggle sidebar (T)" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="9" y1="3" x2="9" y2="21" />
           </svg>
-        </div>
+        </button>
         <button id="btn-new" class="icon-btn" title="New document (Ctrl+N)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -151,14 +149,6 @@
           </svg>
         </button>
         <span class="toolbar-sep"></span>
-        <button id="btn-thumbs" class="icon-btn" title="Toggle sidebar (T)">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round">
-            <rect x="3" y="3" width="7" height="7" rx="1.5" />
-            <rect x="14" y="3" width="7" height="7" rx="1.5" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" />
-            <rect x="14" y="14" width="7" height="7" rx="1.5" />
-          </svg>
-        </button>
         <button id="btn-shortcuts" class="icon-btn" title="Keyboard shortcuts (?)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10" />

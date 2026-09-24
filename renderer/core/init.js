@@ -749,6 +749,7 @@ async function init() {
   setupBeforeUnload();
   createNewTab();
   window.__pdfViewerReady = true;
+  window.__state = state;
   document.body.dataset.ready = "1";
   getOrFetchAppInfo().then((info) => {
     if (info && info.version) {

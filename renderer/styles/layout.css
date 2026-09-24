@@ -51,20 +51,9 @@
   flex-shrink: 0;
 }
 
-.app-brand {
-  display: flex;
-  align-items: center;
-  margin-right: 4px;
-  border-radius: var(--radius-md, 6px);
-  padding: 2px;
-  user-select: none;
-}
-
-.brand-icon {
-  width: 26px;
-  height: 26px;
-  border-radius: 6px;
-  display: block;
+/* Sidebar toggle — sits at the far-left as a layout control */
+#btn-thumbs {
+  margin-right: 2px;
 }
 
 #doc-name {
@@ -92,7 +81,7 @@
 
 #thumbnails {
   flex: none;
-  width: 180px;
+  width: 190px;
   overflow-y: auto;
   overflow-x: hidden;
   background: var(--panel);

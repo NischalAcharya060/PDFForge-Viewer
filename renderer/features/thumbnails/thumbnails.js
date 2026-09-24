@@ -3,7 +3,7 @@ import { el } from '../../core/elements.js';
 import { scrollToPage, layoutPages } from '../viewer/viewer.js';
 
 export const MAX_CONCURRENT_THUMB_RENDERS = 2;
-export let thumbsVisible = true;
+export let thumbsVisible = false;
 export function setThumbsVisible(v) { thumbsVisible = Boolean(v); }
 let thumbRenderGen = 0;
 let thumbRenderActive = 0;
@@ -274,10 +274,11 @@ export function toggleThumbnails() {
 export function applyThumbnails() {
   el.thumbnails.hidden = !thumbsVisible;
   el.btnThumbs.classList.toggle("active", thumbsVisible);
+  el.btnThumbs.setAttribute("aria-expanded", String(thumbsVisible));
   if (thumbsVisible && state.activeSidebarTab === "thumbs") {
     queueThumbRenders();
   }
-  setTimeout(layoutPages, 0);
+  layoutPages();
 }
 
 export function switchSidebarTab(tab) {

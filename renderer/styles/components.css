@@ -48,6 +48,13 @@ button {
   color: var(--accent);
 }
 
+/* Sidebar toggle button — enhanced active indicator */
+#btn-thumbs.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: inset 0 -2px 0 0 var(--accent);
+}
+
 button:focus-visible,
 select:focus-visible,
 input:focus-visible {
