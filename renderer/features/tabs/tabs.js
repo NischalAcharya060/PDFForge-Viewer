@@ -23,6 +23,8 @@ import { el } from '../../core/elements.js';
 import { layoutPages, updateControls, syncFitButtons, updateZoomSelect, queueVisibleRender } from '../viewer/viewer.js';
 import { openDocument, hideAllOverlays } from '../../services/document-service.js';
 import { updateEditorChrome, openTextEditor } from '../editor/editor.js';
+import { confirmUnsavedWork } from '../../components/unsaved-warning.js';
+import { savePdf } from '../editor/editor.js';
 import { escapeHtml, clamp } from '../../utils/helpers.js';
 import { getDocument } from '../../pdfjs/pdf.mjs';
 import {
@@ -239,7 +241,7 @@ export function snapshotCurrentTab() {
     currentTab.name = state.name || currentTab.name;
     currentTab.filePath = state.filePath || currentTab.filePath;
     if (state.data) {
-      currentTab.data = (state.data instanceof Uint8Array ? state.data : new Uint8Array(state.data)).slice();
+      currentTab.data = state.data instanceof Uint8Array ? state.data : new Uint8Array(state.data);
     }
     currentTab.doc = state.doc || currentTab.doc;
     currentTab.loadingTask = state.loadingTask || currentTab.loadingTask;
@@ -411,7 +413,7 @@ export function createNewTab(opts = {}) {
   snapshotCurrentTab();
   setTabCounter(tabCounter + 1);
   const id = 'tab-' + tabCounter;
-  const rawBytes = opts.data ? (opts.data instanceof Uint8Array ? opts.data : new Uint8Array(opts.data)).slice() : null;
+  const rawBytes = opts.data ? (opts.data instanceof Uint8Array ? opts.data : new Uint8Array(opts.data)) : null;
   const newTab = {
     id,
     type: opts.type || 'empty',
@@ -432,22 +434,33 @@ export function createNewTab(opts = {}) {
   };
   tabs.push(newTab);
   restoreTab(newTab);
-
-  if (opts.data && opts.name) {
-    void openDocument(opts.data, opts.name, opts.filePath);
-  }
   return newTab;
 }
 
-export async function closeTab(tabId) {
+export async function closeTab(tabId, { force = false } = {}) {
   const index = tabs.findIndex((t) => t.id === tabId);
-  if (index === -1) return;
+  if (index === -1) return false;
   const tab = tabs[index];
+  const isActive = tabId === activeTabId;
 
-  if (tab.type === "editor" && (tab.editor?.dirty || (tabId === activeTabId && state.editor.dirty))) {
-    if (!window.confirm(`Discard unsaved changes in "${tab.name}"?`)) {
-      return;
+  const tabDirty =
+    (tab.type === "editor" && (tab.editor?.dirty || (isActive && state.editor.dirty))) ||
+    Boolean(tab.dirty || (isActive && state.pdfModified));
+
+  if (!force && tabDirty) {
+    const allowSave = isActive;
+    const action = await confirmUnsavedWork({ allowSave, fileName: tab.name });
+    if (action === "cancel") return false;
+    if (action === "save") {
+      try {
+        await savePdf();
+      } catch {
+        return false;
+      }
+      if (tab.type === "editor" ? state.editor.dirty : state.pdfModified) return false;
     }
+    tab.dirty = false;
+    if (tab.editor) tab.editor.dirty = false;
   }
 
   if (tab.doc) {
@@ -486,7 +499,7 @@ export async function closeTab(tabId) {
 
   if (tabs.length === 0) {
     createNewTab();
-    return;
+    return true;
   }
 
   if (activeTabId === tabId) {
@@ -498,6 +511,8 @@ export async function closeTab(tabId) {
       updateSplitDocSelect();
     }
   }
+
+  return true;
 }
 
 export function cycleTabs(offset) {
@@ -586,7 +601,7 @@ export async function openSplitFile() {
     return;
   }
   setTabCounter(tabCounter + 1);
-  const rawBytes = res.data ? (res.data instanceof Uint8Array ? res.data : new Uint8Array(res.data)).slice() : null;
+  const rawBytes = res.data ? (res.data instanceof Uint8Array ? res.data : new Uint8Array(res.data)) : null;
   const newTab = {
     id: "tab-" + tabCounter,
     type: "pdf",
@@ -642,6 +657,8 @@ export async function openSplitView(tab) {
 export function closeSplitView() {
   setIsSplitActive(false);
   setSplitTabId(null);
+  disconnectSplitObserver();
+  splitRenderSeq++;
   if (el.splitDivider) el.splitDivider.hidden = true;
   if (el.secondaryPane) el.secondaryPane.hidden = true;
   if (el.btnSplitView) el.btnSplitView.classList.remove("active");
@@ -659,8 +676,40 @@ export function closeSplitView() {
   layoutPages();
 }
 
+let splitRenderSeq = 0;
+let splitObserver = null;
+const splitCanvasTasks = new WeakMap();
+
+function disconnectSplitObserver() {
+  if (splitObserver) {
+    splitObserver.disconnect();
+    splitObserver = null;
+  }
+}
+
+async function renderSplitPage(page, vp, canvas, seq) {
+  if (seq !== splitRenderSeq) return;
+  const dpr = window.devicePixelRatio || 1;
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.scale(dpr, dpr);
+  let task;
+  try {
+    task = page.render({ canvasContext: ctx, viewport: vp });
+    splitCanvasTasks.set(canvas, task);
+    await task.promise;
+  } catch (err) {
+    if (!err || err.name !== "RenderingCancelledException") throw err;
+  } finally {
+    if (splitCanvasTasks.get(canvas) === task) splitCanvasTasks.delete(canvas);
+  }
+}
+
 export async function renderSplitDoc(tab) {
   if (!el.secondaryPageHost) return;
+  disconnectSplitObserver();
+  const seq = ++splitRenderSeq;
   el.secondaryPageHost.textContent = "";
   if (!tab || (!tab.data && !tab.doc)) {
     if (el.splitPageIndicator) el.splitPageIndicator.textContent = "";
@@ -678,7 +727,7 @@ export async function renderSplitDoc(tab) {
     if (!rawBytes && tab.doc && typeof tab.doc.getData === "function") {
       try {
         rawBytes = await tab.doc.getData();
-        tab.data = rawBytes.slice();
+        tab.data = rawBytes;
       } catch {}
     }
     if (!rawBytes) {
@@ -688,14 +737,28 @@ export async function renderSplitDoc(tab) {
     const bytesToPass = (rawBytes instanceof Uint8Array ? rawBytes : new Uint8Array(rawBytes)).slice();
     const task = getDocument({ data: bytesToPass });
     const doc = await task.promise;
+    if (seq !== splitRenderSeq) {
+      try {
+        await doc.destroy();
+      } catch {}
+      return;
+    }
     setSplitDoc(doc);
     setSplitPages([]);
     if (el.splitPageIndicator) {
       el.splitPageIndicator.textContent = `${doc.numPages} ${doc.numPages === 1 ? "page" : "pages"}`;
     }
+    const dpr = window.devicePixelRatio || 1;
     const availW = Math.max(260, (el.secondaryPageHost.clientWidth || 400) - 48);
+    const pageData = [];
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i);
+      if (seq !== splitRenderSeq) {
+        try {
+          await doc.destroy();
+        } catch {}
+        return;
+      }
       const vp1 = page.getViewport({ scale: 1 });
       const scale = availW / vp1.width;
       const vp = page.getViewport({ scale });
@@ -707,16 +770,31 @@ export async function renderSplitDoc(tab) {
       pageDiv.style.background = "#ffffff";
       pageDiv.style.boxShadow = "var(--page-shadow)";
       const canvas = document.createElement("canvas");
-      canvas.width = Math.ceil(vp.width * window.devicePixelRatio);
-      canvas.height = Math.ceil(vp.height * window.devicePixelRatio);
+      canvas.width = Math.ceil(vp.width * dpr);
+      canvas.height = Math.ceil(vp.height * dpr);
       canvas.style.width = "100%";
       canvas.style.height = "100%";
-      const ctx = canvas.getContext("2d");
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
       pageDiv.appendChild(canvas);
       el.secondaryPageHost.appendChild(pageDiv);
-      await page.render({ canvasContext: ctx, viewport: vp }).promise;
+      pageData.push({ page, vp, canvas });
     }
+    splitObserver = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
+          const data = pageData[Number(entry.target.dataset.splitIndex)];
+          if (data && !data.rendered) {
+            data.rendered = true;
+            void renderSplitPage(data.page, data.vp, data.canvas, seq);
+          }
+        }
+      },
+      { root: el.secondaryPageHost, rootMargin: "200px 0px", threshold: 0 }
+    );
+    pageData.forEach((d, i) => {
+      d.canvas.dataset.splitIndex = String(i);
+      splitObserver.observe(d.canvas.parentElement);
+    });
   } catch (err) {
     console.warn("Could not render split document:", err);
   }

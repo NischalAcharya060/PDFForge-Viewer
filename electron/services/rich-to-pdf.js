@@ -1,6 +1,7 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const { PDFDocument, rgb, StandardFonts } = require("pdf-lib");
+const fontkit = require("@pdf-lib/fontkit");
 const { textToPdf } = require("./text-to-pdf");
 
 const PAGE_SIZES = {
@@ -8,7 +9,32 @@ const PAGE_SIZES = {
   letter: [612, 792],
 };
 
-const FONT_FILES = ["arial.ttf", "arialbd.ttf", "ariali.ttf", "arialbi.ttf"];
+const FONT_FAMILY_FILES = {
+  "": ["arial.ttf", "arialbd.ttf", "ariali.ttf", "arialbi.ttf"],
+  arial: ["arial.ttf", "arialbd.ttf", "ariali.ttf", "arialbi.ttf"],
+  calibri: ["arial.ttf", "arialbd.ttf", "ariali.ttf", "arialbi.ttf"],
+  "times-new-roman": ["times.ttf", "timesbd.ttf", "timesi.ttf", "timesbi.ttf"],
+  georgia: ["georgia.ttf", "georgiab.ttf", "georgiai.ttf", "georgiaz.ttf"],
+  courier: ["cour.ttf", "courbd.ttf", "couri.ttf", "courbi.ttf"],
+  segoe: ["segoeui.ttf", "segoeuib.ttf", "segoeuii.ttf", "segoeuiz.ttf"],
+};
+
+const STANDARD_FALLBACKS = {
+  "": StandardFonts.Helvetica,
+  arial: StandardFonts.Helvetica,
+  calibri: StandardFonts.Helvetica,
+  "times-new-roman": StandardFonts.TimesRoman,
+  georgia: StandardFonts.TimesRoman,
+  courier: StandardFonts.Courier,
+  segoe: StandardFonts.Helvetica,
+};
+
+const STANDARD_VARIANT_NAMES = {
+  Helvetica: ["Helvetica", "HelveticaBold", "HelveticaOblique", "HelveticaBoldOblique"],
+  TimesRoman: ["TimesRoman", "TimesRomanBold", "TimesRomanItalic", "TimesRomanBoldItalic"],
+  Courier: ["Courier", "CourierBold", "CourierOblique", "CourierBoldOblique"],
+};
+
 const FONT_DIRS = [
   process.env.WINDIR ? path.join(process.env.WINDIR, "Fonts") : null,
   "/System/Library/Fonts/Supplemental",
@@ -34,6 +60,20 @@ const BLOCK_TAGS = new Set(["p", "div", "h1", "h2", "h3", "h4", "h5", "h6", "blo
 const VARIANTS = ["", "B", "I", "BI"];
 
 let fonts = {};
+let fontFallback = {};
+const familyLoaded = new Set();
+
+function parseFontFamily(value) {
+  if (!value) return "";
+  const first = String(value).split(",")[0].trim().replace(/^['"]|['"]$/g, "").toLowerCase();
+  if (first.includes("times")) return "times-new-roman";
+  if (first.includes("georgia")) return "georgia";
+  if (first.includes("courier")) return "courier";
+  if (first.includes("segoe")) return "segoe";
+  if (first.includes("calibri")) return "calibri";
+  if (first.includes("arial") || first.includes("helvetica")) return "arial";
+  return "";
+}
 
 function decodeEntities(str) {
   return str.replace(/&(#x?[0-9a-fA-F]+|[a-zA-Z0-9]+);/g, (match, body) => {
@@ -67,7 +107,7 @@ function parseColor(str) {
 }
 
 function parseStyle(styleStr) {
-  const out = { color: null, bg: null, factor: null };
+  const out = { color: null, bg: null, factor: null, fontFamily: null };
   if (!styleStr) return out;
   for (const part of styleStr.split(";")) {
     const idx = part.indexOf(":");
@@ -76,6 +116,7 @@ function parseStyle(styleStr) {
     const value = part.slice(idx + 1).trim();
     if (key === "color") out.color = parseColor(value);
     else if (key === "background" || key === "background-color") out.bg = parseColor(value);
+    else if (key === "font-family") out.fontFamily = parseFontFamily(value);
     else if (key === "font-size") {
       const m = value.match(/^([\d.]+)(pt|px)?$/);
       if (m) {
@@ -89,7 +130,7 @@ function parseStyle(styleStr) {
 }
 
 function parseClass(cls) {
-  const out = { align: "left", size: null, indent: 0, isPageBreak: false };
+  const out = { align: "left", size: null, indent: 0, isPageBreak: false, fontFamily: null };
   if (!cls) return out;
   const align = cls.match(/ql-align-(left|center|right|justify)/);
   if (align) out.align = align[1];
@@ -97,6 +138,8 @@ function parseClass(cls) {
   if (size) out.size = size[1];
   const indent = cls.match(/ql-indent-(\d)/);
   if (indent) out.indent = Number(indent[1]);
+  const font = cls.match(/ql-font-([a-z0-9-]+)/);
+  if (font) out.fontFamily = parseFontFamily(font[1].replace(/-/g, " "));
   if (cls.includes("page-break") || cls.includes("word-page-break")) out.isPageBreak = true;
   return out;
 }
@@ -124,8 +167,10 @@ function inlineDeltaFor(tag, attrsRaw) {
     if (style.color) delta.color = style.color;
     if (style.bg) delta.bg = style.bg;
     if (style.factor) delta.factor = style.factor;
+    if (style.fontFamily) delta.family = style.fontFamily;
     if (cls.size) delta.factor = SIZE_CLASS[cls.size] || delta.factor || null;
-    return delta.color || delta.bg || delta.factor ? delta : null;
+    if (cls.fontFamily) delta.family = cls.fontFamily;
+    return delta.color || delta.bg || delta.factor || delta.family ? delta : null;
   }
   return null;
 }
@@ -150,7 +195,7 @@ function parseHtml(html) {
       currentBlock = { align: "left", header: 0, quote: false, code: false, list: null, indent: 0, runs: [] };
       stack.push({ tag: "p", block: currentBlock });
     }
-    const style = { bold: false, italic: false, underline: false, strike: false, color: null, bg: null, factor: 1 };
+    const style = { bold: false, italic: false, underline: false, strike: false, color: null, bg: null, factor: 1, family: null };
     for (const frame of stack) {
       const d = frame.delta;
       if (!d) continue;
@@ -161,6 +206,7 @@ function parseHtml(html) {
       if (d.color) style.color = d.color;
       if (d.bg) style.bg = d.bg;
       if (d.factor) style.factor *= d.factor;
+      if (d.family) style.family = d.family;
     }
     currentBlock.runs.push({ text, ...style });
   };
@@ -270,30 +316,49 @@ function parseHtml(html) {
   return blocks;
 }
 
-async function embedFonts(doc) {
+async function loadFontBytes(fileName) {
+  for (const dir of FONT_DIRS) {
+    try {
+      const bytes = await fs.readFile(path.join(dir, fileName));
+      return new Uint8Array(bytes);
+    } catch {
+      // try next directory
+    }
+  }
+  return null;
+}
+
+async function embedFamily(doc, key) {
+  if (familyLoaded.has(key)) return;
+  familyLoaded.add(key);
+  const files = FONT_FAMILY_FILES[key] || FONT_FAMILY_FILES[""];
   const loaded = {};
-  for (let i = 0; i < FONT_FILES.length; i++) {
+  let any = false;
+  for (let i = 0; i < VARIANTS.length; i++) {
     let font = null;
-    for (const dir of FONT_DIRS) {
+    const bytes = await loadFontBytes(files[i]);
+    if (bytes) {
       try {
-        font = await doc.embedFont(path.join(dir, FONT_FILES[i]));
-        break;
+        font = await doc.embedFont(bytes, { subset: true });
       } catch {
-        // try next directory
+        // fall through to variant sharing
       }
     }
-    loaded[VARIANTS[i]] = font;
+    if (font) {
+      loaded[VARIANTS[i]] = font;
+      any = true;
+    }
   }
-  let standardFallback = false;
-  if (!loaded[""]) {
-    loaded[""] = await doc.embedFont(StandardFonts.Helvetica);
-    loaded["B"] = await doc.embedFont(StandardFonts.HelveticaBold);
-    loaded["I"] = await doc.embedFont(StandardFonts.HelveticaOblique);
-    loaded["BI"] = await doc.embedFont(StandardFonts.HelveticaBoldOblique);
-    standardFallback = true;
+  if (!any) {
+    const base = STANDARD_FALLBACKS[key] || StandardFonts.Helvetica;
+    const names = STANDARD_VARIANT_NAMES[base];
+    for (let i = 0; i < VARIANTS.length; i++) {
+      loaded[VARIANTS[i]] = await doc.embedFont(names[i]);
+    }
+    fontFallback[key] = true;
   }
   for (const k of VARIANTS) if (!loaded[k]) loaded[k] = loaded[""];
-  return { fonts: loaded, standardFallback };
+  fonts[key] = loaded;
 }
 
 function sanitizeForStandardFont(text) {
@@ -310,9 +375,14 @@ function sanitizeForStandardFont(text) {
   return out;
 }
 
+function chosenFamilyKey(run) {
+  return run.family && fonts[run.family] ? run.family : "";
+}
+
 function chooseFont(run) {
-  const key = (run.bold ? "B" : "") + (run.italic ? "I" : "");
-  return fonts[key] || fonts[""];
+  const key = chosenFamilyKey(run);
+  const variant = (run.bold ? "B" : "") + (run.italic ? "I" : "");
+  return (fonts[key] && (fonts[key][variant] || fonts[key][""])) || fonts[""][""];
 }
 
 function runSize(run, baseSize) {
@@ -451,7 +521,7 @@ function wordColor(c) {
   return rgb(0.1, 0.1, 0.1);
 }
 
-function drawLine({ page, line, pageW, maxWidth, margin, indent, y, block, listCounter, standardFallback }) {
+function drawLine({ page, line, pageW, maxWidth, margin, indent, y, block, listCounter }) {
   const avail = maxWidth - indent;
   let x = margin + indent;
   if (block.align === "center") {
@@ -468,9 +538,9 @@ function drawLine({ page, line, pageW, maxWidth, margin, indent, y, block, listC
 
   const markerIndent = block.indent * 18 + (block.quote || block.code ? 16 : 0);
   if (block.list) {
-    const font = block.list === "ol" ? fonts["B"] || fonts[""] : fonts[""];
+    const font = chooseFont(block.list === "ol" ? { bold: true } : {});
     const marker = block.list === "ol" ? `${listCounter}.` : "\u2022";
-    const markerText = standardFallback ? sanitizeForStandardFont(marker) : marker;
+    const markerText = fontFallback[""] ? sanitizeForStandardFont(marker) : marker;
     const markerSize = Math.max(10, Math.min(12, line.maxSize * 0.9));
     page.drawText(markerText, {
       x: margin + markerIndent,
@@ -496,7 +566,8 @@ function drawLine({ page, line, pageW, maxWidth, margin, indent, y, block, listC
     }
     const font = chooseFont(word.run);
     const size = word.size;
-    const text = standardFallback ? sanitizeForStandardFont(word.text) : word.text;
+    const familyKey = chosenFamilyKey(word.run);
+    const text = fontFallback[familyKey] ? sanitizeForStandardFont(word.text) : word.text;
     const color = wordColor(word.run.color);
 
     if (word.run.bg) {
@@ -532,12 +603,22 @@ async function richTextToPdf(html, options = {}) {
   const showPageNumbers = options.pageNumbers !== false;
 
   const doc = await PDFDocument.create();
-  const family = await embedFonts(doc);
-  fonts = family.fonts;
-  const standardFallback = family.standardFallback;
-
+  doc.registerFontkit(fontkit);
+  fonts = {};
+  fontFallback = {};
+  familyLoaded.clear();
   const blocks = normalizeBlocks(parseHtml(html));
   if (!blocks.length) blocks.push({ align: "left", header: 0, quote: false, code: false, list: null, indent: 0, runs: [] });
+
+  const usedFamilies = new Set([""]);
+  for (const block of blocks) {
+    for (const run of block.runs) {
+      if (run.family) usedFamilies.add(run.family);
+    }
+  }
+  for (const key of usedFamilies) {
+    await embedFamily(doc, key);
+  }
 
   let page = doc.addPage([pageW, pageH]);
   let y = pageH - margin - baseSize;
@@ -578,7 +659,7 @@ async function richTextToPdf(html, options = {}) {
     for (const line of lines) {
       const lineHeight = Math.ceil((line.maxSize || baseSize) * lineSpacing);
       if (y - lineHeight < margin) newPage();
-      drawLine({ page, line, pageW, maxWidth, margin, indent, y, block, listCounter, standardFallback });
+      drawLine({ page, line, pageW, maxWidth, margin, indent, y, block, listCounter });
       y -= lineHeight;
     }
     y -= blockGap;
@@ -586,10 +667,10 @@ async function richTextToPdf(html, options = {}) {
 
   if (showPageNumbers) {
     const total = doc.getPageCount();
-    const font = fonts[""];
+    const font = chooseFont({});
     for (let i = 0; i < total; i++) {
       const p = doc.getPage(i);
-      const label = standardFallback ? sanitizeForStandardFont(`Page ${i + 1} of ${total}`) : `Page ${i + 1} of ${total}`;
+      const label = fontFallback[""] ? sanitizeForStandardFont(`Page ${i + 1} of ${total}`) : `Page ${i + 1} of ${total}`;
       const w = font.widthOfTextAtSize(label, 8);
       p.drawText(label, { x: (pageW - w) / 2, y: 24, size: 8, font, color: rgb(0.5, 0.5, 0.5) });
     }

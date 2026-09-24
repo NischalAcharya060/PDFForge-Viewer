@@ -15,9 +15,44 @@ export const printPreviewState = {
   colorMode: "color", // "color" | "grayscale"
   copies: 1,
   renderTask: null,
+  editorSegments: [],
 };
 
 export let isPrinting = false;
+
+export function splitEditorContent(html) {
+  const host = document.createElement("div");
+  host.innerHTML = html || "";
+  const segments = [];
+  let current = document.createElement("div");
+  const push = () => {
+    segments.push(current.innerHTML);
+    current = document.createElement("div");
+  };
+  for (const node of Array.from(host.childNodes)) {
+    if (
+      node.nodeType === 1 &&
+      node.classList &&
+      (node.classList.contains("word-page-break") || node.classList.contains("page-break"))
+    ) {
+      push();
+      continue;
+    }
+    if (node.nodeType === 3 && node.nodeValue && node.nodeValue.includes("\f")) {
+      const parts = node.nodeValue.split("\f");
+      for (let i = 0; i < parts.length; i++) {
+        if (parts[i]) current.appendChild(document.createTextNode(parts[i]));
+        if (i < parts.length - 1) push();
+      }
+      continue;
+    }
+    current.appendChild(node);
+  }
+  push();
+  while (segments.length > 1 && !segments[0].trim()) segments.shift();
+  while (segments.length > 1 && !segments[segments.length - 1].trim()) segments.pop();
+  return segments.length ? segments : [""];
+}
 
 export function parsePageRange(rangeStr, maxPages) {
   if (!rangeStr || !rangeStr.trim()) return [];
@@ -106,9 +141,11 @@ export async function renderPrintPreviewPage() {
       // Ignored if cancelled
     }
   } else if (printPreviewState.sourceType === "editor") {
+    const segments = printPreviewState.editorSegments || [];
+    const html = segments[printPreviewState.currentPage - 1] || segments[segments.length - 1] || "<p></p>";
     const previewInner = document.createElement("div");
     previewInner.className = "print-editor-preview-inner";
-    previewInner.innerHTML = quill && quill.root ? quill.root.innerHTML : "<p></p>";
+    previewInner.innerHTML = html;
     if (printPreviewState.orientation === "landscape") {
       previewInner.style.width = "640px";
       previewInner.style.height = "420px";
@@ -137,7 +174,10 @@ export async function showPrintPreview() {
 
   printPreviewState.isOpen = true;
   printPreviewState.sourceType = isEditor ? "editor" : "pdf";
-  printPreviewState.totalPages = isEditor ? 1 : (state.pages?.length || 1);
+  printPreviewState.editorSegments = isEditor
+    ? splitEditorContent(quill && quill.root ? quill.root.innerHTML : "")
+    : [];
+  printPreviewState.totalPages = isEditor ? printPreviewState.editorSegments.length : (state.pages?.length || 1);
   printPreviewState.currentPage = 1;
   printPreviewState.pagesMode = "all";
   printPreviewState.customRange = "";
@@ -167,17 +207,13 @@ export async function executePrintFromPreview() {
   isPrinting = true;
 
   const total = printPreviewState.totalPages;
-  let pagesToPrint = [];
-  if (printPreviewState.sourceType === "pdf") {
-    if (printPreviewState.pagesMode === "current") {
-      pagesToPrint = [printPreviewState.currentPage];
-    } else if (printPreviewState.pagesMode === "custom") {
-      pagesToPrint = parsePageRange(el.printPagesCustom ? el.printPagesCustom.value : "", total);
-      if (pagesToPrint.length === 0) {
-        showToast("Invalid custom range. Printing all pages.", "info");
-        pagesToPrint = Array.from({ length: total }, (_, i) => i + 1);
-      }
-    } else {
+  let pagesToPrint = Array.from({ length: total }, (_, i) => i + 1);
+  if (printPreviewState.pagesMode === "current") {
+    pagesToPrint = [printPreviewState.currentPage];
+  } else if (printPreviewState.pagesMode === "custom") {
+    pagesToPrint = parsePageRange(el.printPagesCustom ? el.printPagesCustom.value : "", total);
+    if (pagesToPrint.length === 0) {
+      showToast("Invalid custom range. Printing all pages.", "info");
       pagesToPrint = Array.from({ length: total }, (_, i) => i + 1);
     }
   }
@@ -186,13 +222,20 @@ export async function executePrintFromPreview() {
   el.printHost.textContent = "";
 
   if (printPreviewState.sourceType === "editor" && quill) {
-    const sheet = document.createElement("section");
-    sheet.className = "print-sheet print-editor-sheet";
-    if (printPreviewState.colorMode === "grayscale") {
-      sheet.style.filter = "grayscale(100%)";
+    const segments = printPreviewState.editorSegments.length
+      ? printPreviewState.editorSegments
+      : splitEditorContent(quill.root ? quill.root.innerHTML : "");
+    for (const pageNum of pagesToPrint) {
+      const segment = segments[pageNum - 1];
+      if (segment === undefined) continue;
+      const sheet = document.createElement("section");
+      sheet.className = "print-sheet print-editor-sheet";
+      if (printPreviewState.colorMode === "grayscale") {
+        sheet.style.filter = "grayscale(100%)";
+      }
+      sheet.innerHTML = segment;
+      el.printHost.appendChild(sheet);
     }
-    sheet.innerHTML = quill.root ? quill.root.innerHTML : "";
-    el.printHost.appendChild(sheet);
 
     let cleaned = false;
     const cleanup = () => {

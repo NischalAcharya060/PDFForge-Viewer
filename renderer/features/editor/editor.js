@@ -6,6 +6,52 @@ import { hideAllOverlays, showEmpty } from '../../services/document-service.js';
 import { saveRecentFile } from '../../services/recent-files.js';
 import { showToast } from '../../components/toast.js';
 import { createNewTab, closeTab, renderTabBar } from '../tabs/tabs.js';
+import { confirmUnsavedWork } from '../../components/unsaved-warning.js';
+
+const FONT_LABELS = {
+  "": "Calibri",
+  "arial": "Arial",
+  "times-new-roman": "Times New Roman",
+  "georgia": "Georgia",
+  "courier": "Courier New",
+  "segoe": "Segoe UI",
+};
+
+const SIZE_LABELS = {
+  "": "11",
+  "9pt": "9",
+  "10pt": "10",
+  "11pt": "11",
+  "12pt": "12",
+  "14pt": "14",
+  "16pt": "16",
+  "18pt": "18",
+  "20pt": "20",
+  "24pt": "24",
+  "28pt": "28",
+  "36pt": "36",
+  "48pt": "48",
+};
+
+const HEADER_LABELS = {
+  "": "Normal Text",
+  "1": "Heading 1",
+  "2": "Heading 2",
+  "3": "Heading 3",
+  "4": "Heading 4",
+};
+
+const SPACING_LABELS = {
+  "": "1.15",
+  "1.0": "1.0",
+  "1.15": "1.15",
+  "1.25": "1.25",
+  "1.45": "1.45",
+  "1.5": "1.5",
+  "2.0": "2.0",
+  "2.5": "2.5",
+  "3.0": "3.0",
+};
 
 export function initQuill() {
   if (typeof Quill === "undefined") return;
@@ -80,79 +126,38 @@ export function initQuill() {
 
   // Ensure all Quill pickers (Font, Size, Header) have explicit data-label attributes
   function setupQuillPickerLabels() {
-    const fontLabels = {
-      "": "Calibri",
-      "arial": "Arial",
-      "times-new-roman": "Times New Roman",
-      "georgia": "Georgia",
-      "courier": "Courier New",
-      "segoe": "Segoe UI",
-    };
     document.querySelectorAll(".word-ribbon .ql-picker.ql-font .ql-picker-item").forEach((item) => {
       const val = item.getAttribute("data-value") || "";
-      if (fontLabels[val]) {
-        item.setAttribute("data-label", fontLabels[val]);
+      if (FONT_LABELS[val]) {
+        item.setAttribute("data-label", FONT_LABELS[val]);
       }
     });
 
-    const sizeLabels = {
-      "": "11",
-      "9pt": "9",
-      "10pt": "10",
-      "11pt": "11",
-      "12pt": "12",
-      "14pt": "14",
-      "16pt": "16",
-      "18pt": "18",
-      "20pt": "20",
-      "24pt": "24",
-      "28pt": "28",
-      "36pt": "36",
-      "48pt": "48",
-    };
     document.querySelectorAll(".word-ribbon .ql-picker.ql-size .ql-picker-item").forEach((item) => {
       const val = item.getAttribute("data-value") || "";
-      if (sizeLabels[val]) {
-        item.setAttribute("data-label", sizeLabels[val]);
+      if (SIZE_LABELS[val]) {
+        item.setAttribute("data-label", SIZE_LABELS[val]);
       }
     });
 
-    const headerLabels = {
-      "": "Normal Text",
-      "1": "Heading 1",
-      "2": "Heading 2",
-      "3": "Heading 3",
-      "4": "Heading 4",
-    };
     document.querySelectorAll(".word-ribbon .ql-picker.ql-header .ql-picker-item").forEach((item) => {
       const val = item.getAttribute("data-value") || "";
-      if (headerLabels[val]) {
-        item.setAttribute("data-label", headerLabels[val]);
+      if (HEADER_LABELS[val]) {
+        item.setAttribute("data-label", HEADER_LABELS[val]);
       }
     });
 
-    const spacingLabels = {
-      "": "1.15",
-      "1.0": "1.0",
-      "1.15": "1.15",
-      "1.25": "1.25",
-      "1.45": "1.45",
-      "1.5": "1.5",
-      "2.0": "2.0",
-      "2.5": "2.5",
-      "3.0": "3.0",
-    };
     document.querySelectorAll(".word-ribbon .ql-picker.word-select-spacing .ql-picker-item").forEach((item) => {
       const val = item.getAttribute("data-value") || "";
-      if (spacingLabels[val]) {
-        item.setAttribute("data-label", spacingLabels[val]);
+      if (SPACING_LABELS[val]) {
+        item.setAttribute("data-label", SPACING_LABELS[val]);
       }
     });
     // Set initial label on spacing picker
     const spacingLabel = document.querySelector(".word-ribbon .ql-picker.word-select-spacing .ql-picker-label");
     if (spacingLabel && !spacingLabel.getAttribute("data-label")) {
       const curVal = el.ribbonLineSpacing ? el.ribbonLineSpacing.value : "1.15";
-      spacingLabel.setAttribute("data-label", spacingLabels[curVal] || curVal || "1.15");
+      spacingLabel.setAttribute("data-label", SPACING_LABELS[curVal] || curVal || "1.15");
       spacingLabel.setAttribute("data-value", curVal || "1.15");
     }
   }
@@ -457,14 +462,18 @@ export function newTextFile() {
   }
 }
 
-export function exitEditor() {
+export async function exitEditor() {
   if (!state.editor.active) return true;
   if (tabs.length > 1) {
-    closeTab(activeTabId);
-    return true;
+    return closeTab(activeTabId);
   }
-  if (state.editor.dirty && !window.confirm("Discard changes? You have unsaved changes that will be lost.")) {
-    return false;
+  if (state.editor.dirty) {
+    const action = await confirmUnsavedWork({ allowSave: true, fileName: state.editor.fileName });
+    if (action === "cancel") return false;
+    if (action === "save") {
+      await savePdf();
+      if (state.editor.dirty) return false;
+    }
   }
   state.editor.active = false;
   state.editor.dirty = false;
@@ -478,13 +487,14 @@ export function exitEditor() {
     currentTab.type = "empty";
     currentTab.name = "New Tab";
     currentTab.dirty = false;
+    currentTab.editor = null;
   }
   showEmpty();
   renderTabBar();
   return true;
 }
 
-export function leaveEditor() {
+export async function leaveEditor() {
   if (!state.editor.active) return true;
   return exitEditor();
 }

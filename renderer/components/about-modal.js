@@ -49,10 +49,10 @@ export async function showAboutModal() {
 
   const rows = [
     ["Product", `PDFForge Viewer`],
-    ["Version", `${appVersion} <span class="about-pill green">Latest Release</span>`],
+    ["Version", `${escapeHtml(appVersion)} <span class="about-pill green">Latest Release</span>`],
     ["Default PDF Reader", isDef ? `<span class="about-pill green">Default System Reader</span>` : `<span class="about-pill">Not Default</span>`],
     ["Edition", `Desktop Standard Edition`],
-    ["Platform", osString],
+    ["Platform", `${escapeHtml(platformName)} ${escapeHtml(archString)}`.trim()],
     ["Privacy", `<span class="about-pill green">100% Offline · Zero Telemetry</span>`],
     ["Document Security", `<span class="about-pill green">On-Device Local Processing</span>`],
     ["Key Features", `Multi-Tab Reading, Split View, Word Editor, Instant Search`],

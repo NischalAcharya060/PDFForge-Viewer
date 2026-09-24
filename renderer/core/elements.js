@@ -164,6 +164,7 @@ export const el = {
   imgInsertBtn: document.getElementById("img-insert-btn"),
   // Unsaved Changes Warning Modal
   unsavedWarningModal: document.getElementById("unsaved-warning-modal"),
+  unsavedWarningText: document.getElementById("unsaved-warning-text"),
   unsavedDocName: document.getElementById("unsaved-doc-name"),
   unsavedBtnCancel: document.getElementById("unsaved-btn-cancel"),
   unsavedBtnDiscard: document.getElementById("unsaved-btn-discard"),

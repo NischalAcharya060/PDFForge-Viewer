@@ -110,10 +110,24 @@ function showPasswordModal(note) {
   setTimeout(() => el.passwordInput.focus(), 0);
 }
 
-export async function openDocument(data, name, filePath) {
+const inflightLoads = new Map();
+
+export function openDocument(data, name, filePath) {
   const currentTab = tabs ? tabs.find((t) => t.id === activeTabId) : null;
+  const key = `${currentTab ? currentTab.id : "none"}:${name || ""}`;
+  if (inflightLoads.has(key)) return inflightLoads.get(key);
+  const promise = performOpen(data, name, filePath, currentTab);
+  inflightLoads.set(key, promise);
+  const settle = () => {
+    if (inflightLoads.get(key) === promise) inflightLoads.delete(key);
+  };
+  promise.then(settle, settle);
+  return promise;
+}
+
+async function performOpen(data, name, filePath, currentTab) {
   if (currentTab && currentTab.type === "editor") {
-    if (!leaveEditor()) return;
+    if (!(await leaveEditor())) return;
   }
   state.editor.active = false;
   state.editor.dirty = false;

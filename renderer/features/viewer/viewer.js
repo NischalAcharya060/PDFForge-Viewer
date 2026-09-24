@@ -7,6 +7,7 @@ import { highlightPage } from '../search/search.js';
 import { showToast } from '../../components/toast.js';
 import { updateActiveThumb, updateThumbFromPageCanvas, thumbsVisible, applyThumbnails, queueThumbRenders, buildThumbnails, buildOutline } from '../thumbnails/thumbnails.js';
 import { setLoading, openDocument } from '../../services/document-service.js';
+import { renderTabBar } from '../tabs/tabs.js';
 
 export function availableSpace() {
   const w = el.pageHost.clientWidth - PAGE_PAD * 2;
@@ -540,8 +541,11 @@ export async function addBlankPageToCurrentDoc() {
       state.data = res.data;
       const currentTab = tabs.find((t) => t.id === activeTabId);
       if (currentTab) currentTab.data = res.data;
+      state.pdfModified = true;
+      if (currentTab) currentTab.dirty = true;
       await openDocument(res.data, state.name, state.filePath);
       goToPage(state.pages.length);
+      renderTabBar();
       showToast("Added blank page to document", "success");
     } else {
       showToast("Failed to add blank page: " + (res?.error || "unknown error"), "error");
@@ -567,9 +571,12 @@ export async function appendPdfToCurrentDoc() {
       state.data = res.data;
       const currentTab = tabs.find((t) => t.id === activeTabId);
       if (currentTab) currentTab.data = res.data;
+      state.pdfModified = true;
+      if (currentTab) currentTab.dirty = true;
       const prevCount = state.pages.length;
       await openDocument(res.data, state.name, state.filePath);
       goToPage(prevCount + 1);
+      renderTabBar();
       showToast("Inserted pages from PDF", "success");
     } else {
       showToast("Failed to insert pages: " + (res?.error || "unknown error"), "error");

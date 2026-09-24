@@ -9,6 +9,7 @@ const html = [
   '<span style="color: rgb(200, 20, 20);">colored</span> and extra <span style="font-size: 16pt;">16pt font size</span> words.</p>',
   '<p class="ql-align-right">Right aligned line here.</p>',
   '<p class="ql-align-justify">Justified paragraph. The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. How vexingly quick daft zebras jump.</p>',
+  '<p><span class="ql-font-arial" style="font-family: Arial;">Arial run</span>, <span class="ql-font-georgia" style="font-family: Georgia;">Georgia run</span>, <span class="ql-font-times-new-roman" style="font-family: \'Times New Roman\';">Times run</span>, and <span class="ql-font-segoe" style="font-family: \'Segoe UI\';">Segoe run</span>.</p>',
   "<hr>",
   "<h2>Things to do</h2>",
   '<ol><li>First numbered item.</li><li>Second numbered item with a fairly long description that wraps onto another line to test hanging alignment.</li></ol>',

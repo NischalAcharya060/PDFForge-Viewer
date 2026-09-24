@@ -12,11 +12,12 @@
     "build": "electron-builder",
     "build:dir": "electron-builder --dir",
     "dist": "electron-builder --win nsis",
-    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/services/file-association.js && node --check electron/services/rich-to-pdf.js && node --check electron/services/text-to-pdf.js && node --check electron/utils/pdf-helpers.js",
+    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/services/file-association.js && node --check electron/services/rich-to-pdf.js && node --check electron/services/text-to-pdf.js && node --check electron/utils/pdf-helpers.js && node scripts/lint-renderer.js",
     "test": "npm run lint && npm run test:rich",
     "test:rich": "node scripts/rich-smoke.js"
   },
   "dependencies": {
+    "@pdf-lib/fontkit": "^1.1.1",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.3.289",
     "quill": "^2.0.3"
@@ -41,9 +42,11 @@
       "node_modules/pdfjs-dist/build/**/*",
       "node_modules/pdfjs-dist/web/**/*",
       "node_modules/pdf-lib/**/*",
+      "node_modules/@pdf-lib/**/*",
       "node_modules/quill/dist/**/*",
       "!node_modules/pdfjs-dist/**/*.map",
       "!node_modules/pdf-lib/**/*.map",
+      "!node_modules/@pdf-lib/**/*.map",
       "!node_modules/quill/**/*.map",
       "!renderer/viewer.js",
       "!renderer/styles.css",
