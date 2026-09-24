@@ -3,7 +3,9 @@
   "version": "1.1.0",
   "description": "A fast, private, offline desktop PDF viewer.",
   "main": "electron/main.js",
-  "author": "PDFForge",
+  "author": {
+    "name": "Grdh_Ravan"
+  },
   "license": "MIT",
   "scripts": {
     "dev": "electron .",
@@ -71,7 +73,10 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
-      "createStartMenuShortcut": true
+      "createStartMenuShortcut": true,
+      "runAfterFinish": false,
+      "uninstallDisplayName": "PDFForge Viewer",
+      "shortcutName": "PDFForge Viewer"
     }
   }
 }
