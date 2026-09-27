@@ -71,6 +71,7 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
+      "artifactName": "PDFForge-Setup.${ext}",
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
