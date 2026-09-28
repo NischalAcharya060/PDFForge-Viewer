@@ -4,8 +4,10 @@
   "description": "A fast, private, offline desktop PDF viewer.",
   "main": "electron/main.js",
   "author": {
-    "name": "Grdh_Ravan"
+    "name": "Grdh_Ravan",
+    "email": "Nischal060@gmail.com"
   },
+  "homepage": "https://github.com/NischalAcharya060/PDFForge-Viewer",
   "license": "MIT",
   "scripts": {
     "dev": "electron .",
@@ -13,8 +15,10 @@
     "smoke": "electron . --smoke",
     "build": "electron-builder",
     "build:dir": "electron-builder --dir",
+    "build:windows": "electron-builder --win nsis",
+    "build:linux": "node scripts/build-linux.js",
     "dist": "electron-builder --win nsis",
-    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/services/file-association.js && node --check electron/services/rich-to-pdf.js && node --check electron/services/text-to-pdf.js && node --check electron/utils/pdf-helpers.js && node scripts/lint-renderer.js",
+    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/services/file-association.js && node --check electron/services/rich-to-pdf.js && node --check electron/services/text-to-pdf.js && node --check electron/utils/pdf-helpers.js && node --check scripts/build-linux.js && node scripts/lint-renderer.js",
     "test": "npm run lint && npm run test:rich",
     "test:rich": "node scripts/rich-smoke.js"
   },
@@ -78,6 +82,38 @@
       "runAfterFinish": false,
       "uninstallDisplayName": "PDFForge Viewer",
       "shortcutName": "PDFForge Viewer"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb",
+        "tar.gz"
+      ],
+      "executableName": "pdfforge-viewer",
+      "icon": "assets/brand-icon.png",
+      "category": "Office;Viewer;",
+      "maintainer": "Grdh_Ravan <support@pdfforge.local>",
+      "synopsis": "A fast, private, offline desktop PDF viewer",
+      "description": "PDFForge Viewer is a fast, private, 100% offline desktop PDF viewer and document creator.",
+      "mimeTypes": [
+        "application/pdf"
+      ],
+      "fileAssociations": [
+        {
+          "ext": "pdf",
+          "name": "PDF Document",
+          "description": "PDFForge Viewer document",
+          "mimeType": "application/pdf",
+          "role": "Viewer"
+        }
+      ]
+    },
+    "deb": {
+      "artifactName": "PDFForge-Setup-${version}-${arch}.${ext}",
+      "priority": "optional"
+    },
+    "appImage": {
+      "artifactName": "PDFForge-${version}-${arch}.${ext}"
     }
   }
 }
