@@ -1,17 +1,19 @@
 const { app, dialog, shell } = require("electron");
 const path = require("node:path");
+const os = require("node:os");
 const fs = require("node:fs");
 const fsPromises = require("node:fs/promises");
 const { exec, execFile } = require("node:child_process");
 
 const CONFIG_FILE = "file-icon-config.json";
+const LINUX_DESKTOP_FILENAME = "pdfforge-viewer.desktop";
 
 function getConfigFile() {
   return path.join(app.getPath("userData"), CONFIG_FILE);
 }
 
-function getAssetIconPath(iconId) {
-  return path.join(__dirname, "..", "..", "assets", "file-icons", `${iconId}.ico`);
+function getAssetIconPath(iconId, ext = "ico") {
+  return path.join(__dirname, "..", "..", "assets", "file-icons", `${iconId}.${ext}`);
 }
 
 function runRegCommand(args) {
@@ -22,11 +24,34 @@ function runRegCommand(args) {
   });
 }
 
+function runCommand(cmd, args, timeout = 3000) {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout }, (error, stdout, stderr) => {
+      resolve({
+        error,
+        stdout: stdout ? String(stdout) : "",
+        stderr: stderr ? String(stderr) : "",
+        code: error ? error.code : 0,
+      });
+    });
+  });
+}
+
 /**
- * Notify Windows Explorer of icon and file association updates
+ * Notify OS shell of icon and file association updates
  */
 function notifyShellChange() {
   return new Promise((resolve) => {
+    if (process.platform === "linux") {
+      const appsDir = path.join(os.homedir(), ".local", "share", "applications");
+      const iconsDir = path.join(os.homedir(), ".local", "share", "icons", "hicolor");
+      Promise.all([
+        runCommand("update-desktop-database", [appsDir]),
+        runCommand("gtk-update-icon-cache", ["-f", "-t", iconsDir]),
+      ]).finally(() => resolve());
+      return;
+    }
+
     if (process.platform !== "win32") {
       resolve();
       return;
@@ -53,6 +78,16 @@ function notifyShellChange() {
  * Check if PDFForge Viewer is currently the default reader for .pdf files
  */
 async function checkDefaultStatus() {
+  if (process.platform === "linux") {
+    const res = await runCommand("xdg-mime", ["query", "default", "application/pdf"]);
+    const desktopId = res.stdout.trim();
+    return {
+      isDefault: /pdfforge/i.test(desktopId),
+      progId: desktopId,
+      osSupported: true,
+    };
+  }
+
   if (process.platform !== "win32") {
     return { isDefault: false, progId: "", osSupported: false };
   }
@@ -135,10 +170,11 @@ async function checkDefaultStatus() {
  * Get saved icon preferences and list of presets
  */
 function getIconPreferences() {
+  const iconExt = process.platform === "linux" ? "png" : "ico";
   const defaults = {
     selectedIconId: "brand",
     customIconPath: null,
-    currentIconPath: getAssetIconPath("brand"),
+    currentIconPath: getAssetIconPath("brand", iconExt),
   };
 
   const configFile = getConfigFile();
@@ -161,7 +197,7 @@ function getIconPreferences() {
       subtitle: "PDFForge official rounded emblem",
       previewSvg: "file-icons/brand.svg",
       previewPng: "file-icons/brand.png",
-      icoPath: getAssetIconPath("brand"),
+      icoPath: getAssetIconPath("brand", iconExt),
     },
     {
       id: "classic",
@@ -169,7 +205,7 @@ function getIconPreferences() {
       subtitle: "Clean paper sheet with red PDF banner",
       previewSvg: "file-icons/classic.svg",
       previewPng: "file-icons/classic.png",
-      icoPath: getAssetIconPath("classic"),
+      icoPath: getAssetIconPath("classic", iconExt),
     },
     {
       id: "dark",
@@ -177,7 +213,7 @@ function getIconPreferences() {
       subtitle: "Sleek charcoal slate with ruby accents",
       previewSvg: "file-icons/dark.svg",
       previewPng: "file-icons/dark.png",
-      icoPath: getAssetIconPath("dark"),
+      icoPath: getAssetIconPath("dark", iconExt),
     },
     {
       id: "minimal",
@@ -185,7 +221,7 @@ function getIconPreferences() {
       subtitle: "Clean outline with scarlet ribbon tag",
       previewSvg: "file-icons/minimal.svg",
       previewPng: "file-icons/minimal.png",
-      icoPath: getAssetIconPath("minimal"),
+      icoPath: getAssetIconPath("minimal", iconExt),
     },
   ];
 
@@ -193,7 +229,7 @@ function getIconPreferences() {
     selectedIconId,
     customIconPath,
     presets,
-    osSupported: process.platform === "win32",
+    osSupported: process.platform === "win32" || process.platform === "linux",
   };
 }
 
@@ -208,11 +244,58 @@ function defaultAppsAppPageUri() {
 }
 
 /**
- * Register file associations in HKCU registry and open Windows Default Apps settings
+ * Register file associations on Windows (HKCU registry) or Linux (XDG desktop entry + xdg-mime)
  */
 async function registerAsDefault() {
+  if (process.platform === "linux") {
+    const execTarget = process.env.APPIMAGE
+      ? `"${process.env.APPIMAGE}" %U`
+      : app.isPackaged
+      ? `"${process.execPath}" %U`
+      : `"${process.execPath}" "${path.resolve(__dirname, "..", "..")}" %U`;
+
+    const appsDir = path.join(os.homedir(), ".local", "share", "applications");
+    await fsPromises.mkdir(appsDir, { recursive: true });
+
+    const prefs = getIconPreferences();
+    let iconPath = getAssetIconPath(prefs.selectedIconId, "png");
+    if (prefs.selectedIconId === "custom" && prefs.customIconPath && fs.existsSync(prefs.customIconPath)) {
+      iconPath = prefs.customIconPath;
+    } else if (!fs.existsSync(iconPath)) {
+      iconPath = path.join(__dirname, "..", "..", "assets", "brand-icon.png");
+    }
+
+    const desktopContent = [
+      "[Desktop Entry]",
+      "Name=PDFForge Viewer",
+      "Comment=A fast, private, offline desktop PDF viewer.",
+      `Exec=${execTarget}`,
+      "Terminal=false",
+      "Type=Application",
+      `Icon=${iconPath}`,
+      "StartupWMClass=PDFForge Viewer",
+      "Categories=Office;Viewer;",
+      "MimeType=application/pdf;",
+      "",
+    ].join("\n");
+
+    const desktopFile = path.join(appsDir, LINUX_DESKTOP_FILENAME);
+    await fsPromises.writeFile(desktopFile, desktopContent, "utf8");
+    await fsPromises.chmod(desktopFile, 0o755).catch(() => {});
+
+    await runCommand("xdg-mime", ["default", LINUX_DESKTOP_FILENAME, "application/pdf"]);
+    await notifyShellChange();
+
+    const status = await checkDefaultStatus();
+    return {
+      success: true,
+      isDefault: status.isDefault,
+      message: "PDFForge Viewer has been set as your default PDF reader!",
+    };
+  }
+
   if (process.platform !== "win32") {
-    return { success: false, message: "File associations are only supported on Windows." };
+    return { success: false, message: "File associations are only supported on Windows and Linux." };
   }
 
   const openCmd = app.isPackaged
@@ -257,18 +340,71 @@ async function registerAsDefault() {
   }
 
   const status = await checkDefaultStatus();
-  return { success: true, isDefault: status.isDefault };
+  return {
+    success: true,
+    isDefault: status.isDefault,
+    message: "Registered as PDF reader! Click \"Set as default\" on the Windows page that opened.",
+  };
 }
 
 /**
- * Apply a selected preset icon or custom .ico to Windows Explorer PDF file association
+ * Apply a selected preset icon or custom icon to OS PDF file association
  */
 async function applyPdfFileIcon({ iconId, customPath }) {
-  if (process.platform !== "win32") {
-    return { success: false, message: "File icon customization is only supported on Windows." };
+  const userDataDir = app.getPath("userData");
+
+  if (process.platform === "linux") {
+    let targetIconPath = "";
+    if (iconId === "custom") {
+      if (!customPath || !fs.existsSync(customPath)) {
+        return { success: false, error: "Custom icon file does not exist." };
+      }
+      const ext = path.extname(customPath) || ".png";
+      const persistentCustomPath = path.join(userDataDir, `custom-pdf-icon${ext}`);
+      await fsPromises.copyFile(customPath, persistentCustomPath);
+      targetIconPath = persistentCustomPath;
+    } else {
+      const srcPng = getAssetIconPath(iconId, "png");
+      if (!fs.existsSync(srcPng)) {
+        return { success: false, error: `Preset icon '${iconId}' not found.` };
+      }
+      const persistentPresetPath = path.join(userDataDir, `pdf-icon-${iconId}.png`);
+      await fsPromises.copyFile(srcPng, persistentPresetPath);
+      targetIconPath = persistentPresetPath;
+    }
+
+    // Install into user hicolor icon theme for application-pdf mimetype
+    try {
+      const mimeIconsDir = path.join(os.homedir(), ".local", "share", "icons", "hicolor", "256x256", "mimetypes");
+      await fsPromises.mkdir(mimeIconsDir, { recursive: true });
+      await fsPromises.copyFile(targetIconPath, path.join(mimeIconsDir, "application-pdf.png"));
+      await fsPromises.copyFile(targetIconPath, path.join(mimeIconsDir, "x-office-document.png")).catch(() => {});
+    } catch {
+      // ignore if user icon dir is read-only
+    }
+
+    const configFile = getConfigFile();
+    const configData = {
+      selectedIconId: iconId,
+      customIconPath: iconId === "custom" ? targetIconPath : customPath || null,
+      updatedAt: new Date().toISOString(),
+    };
+    fs.writeFileSync(configFile, JSON.stringify(configData, null, 2), "utf8");
+
+    await notifyShellChange();
+
+    return {
+      success: true,
+      iconId,
+      iconPath: targetIconPath,
+      message: "PDF file icon updated!",
+    };
   }
 
-  const userDataDir = app.getPath("userData");
+  if (process.platform !== "win32") {
+    return { success: false, message: "File icon customization is only supported on Windows and Linux." };
+  }
+
   let targetIconPath = "";
 
   if (iconId === "custom") {
@@ -317,20 +453,29 @@ async function applyPdfFileIcon({ iconId, customPath }) {
     success: true,
     iconId,
     iconPath: targetIconPath,
+    message: "PDF file icon updated in Windows Explorer!",
   };
 }
 
 /**
- * Show native open dialog to pick a custom .ico file
+ * Show native open dialog to pick a custom icon file
  */
 async function chooseCustomIconDialog(mainWindow) {
+  const isLinux = process.platform === "linux";
+  const filters = isLinux
+    ? [
+        { name: "Icon Files (*.png, *.svg, *.ico)", extensions: ["png", "svg", "ico"] },
+        { name: "All Files (*.*)", extensions: ["*"] },
+      ]
+    : [
+        { name: "Windows Icon Files (*.ico)", extensions: ["ico"] },
+        { name: "All Files (*.*)", extensions: ["*"] },
+      ];
+
   const result = await dialog.showOpenDialog(mainWindow, {
-    title: "Select PDF File Icon (.ico)",
+    title: isLinux ? "Select PDF File Icon" : "Select PDF File Icon (.ico)",
     properties: ["openFile"],
-    filters: [
-      { name: "Windows Icon Files (*.ico)", extensions: ["ico"] },
-      { name: "All Files (*.*)", extensions: ["*"] },
-    ],
+    filters,
   });
 
   if (result.canceled || !result.filePaths.length) {
@@ -338,19 +483,30 @@ async function chooseCustomIconDialog(mainWindow) {
   }
 
   const selectedPath = result.filePaths[0];
-  if (!/\.ico$/i.test(selectedPath)) {
-    return { canceled: true, error: "Please select a valid .ico file." };
+  const validPattern = isLinux ? /\.(png|svg|ico)$/i : /\.ico$/i;
+  if (!validPattern.test(selectedPath)) {
+    return {
+      canceled: true,
+      error: isLinux ? "Please select a valid .png, .svg, or .ico file." : "Please select a valid .ico file.",
+    };
   }
 
   return { canceled: false, filePath: selectedPath };
 }
 
 /**
- * Open Windows Default Apps settings directly
+ * Open system Default Apps settings directly
  */
 async function openDefaultAppsSettings() {
   if (process.platform === "win32") {
     return shell.openExternal(defaultAppsAppPageUri());
+  }
+  if (process.platform === "linux") {
+    const res = await runCommand("gnome-control-center", ["default-apps"]);
+    if (res.error) {
+      await runCommand("systemsettings", ["kcm_componentchooser"]);
+    }
+    return true;
   }
   return false;
 }
@@ -364,3 +520,4 @@ module.exports = {
   openDefaultAppsSettings,
   notifyShellChange,
 };
+
