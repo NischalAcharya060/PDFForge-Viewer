@@ -218,7 +218,7 @@ export async function handleSetAsDefault() {
   try {
     const res = await window.pdfViewer.setAsDefaultPdfViewer();
     if (res?.success) {
-      showToast("Registered as PDF reader! Click \"Set as default\" on the Windows page that opened.", "success");
+      showToast(res.message || "Registered as PDF reader! Click \"Set as default\" on the Windows page that opened.", "success");
     } else {
       showToast(res?.message || "Failed to register file association.", "error");
     }
@@ -261,7 +261,7 @@ export async function handleApplyFileIcon() {
   if (!window.pdfViewer?.applyPdfFileIcon) return;
 
   if (selectedIconId === "custom" && !customIconPath) {
-    showToast("Please browse and select a .ico file first.", "warning");
+    showToast("Please browse and select an icon file first.", "warning");
     return;
   }
 
@@ -277,7 +277,7 @@ export async function handleApplyFileIcon() {
     });
 
     if (res?.success) {
-      showToast("PDF file icon updated in Windows Explorer!", "success");
+      showToast(res.message || "PDF file icon updated in Windows Explorer!", "success");
       hideFileAssocModal();
     } else {
       showToast(res?.error || res?.message || "Failed to update file icon.", "error");
