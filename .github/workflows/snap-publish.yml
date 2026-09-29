@@ -1,0 +1,54 @@
+name: Build & Publish Snap Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_channel:
+        description: 'Snap Store channel to release to (if SNAPCRAFT_STORE_CREDENTIALS secret is configured)'
+        required: false
+        default: 'stable'
+        type: choice
+        options:
+          - stable
+          - candidate
+          - beta
+          - edge
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build-snap:
+    name: Build Snap & Linux Packages (Ubuntu)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Snap Package via Snapcraft
+        uses: snapcore/action-build@v1
+        id: snapcraft
+
+      - name: Upload .snap Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: pdfforge-viewer-snap
+          path: ${{ steps.snapcraft.outputs.snap }}
+
+      - name: Publish to Snapcraft Store
+        if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.snapcraft.outputs.snap }}
+          release: ${{ github.event.inputs.release_channel || 'stable' }}

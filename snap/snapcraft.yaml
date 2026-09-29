@@ -1,0 +1,69 @@
+name: pdfforge-viewer
+base: core22
+version: '1.1.0'
+title: PDFForge Viewer
+summary: A fast, private, offline desktop PDF viewer
+description: |
+  PDFForge Viewer is a fast, private, 100% offline desktop PDF viewer
+  and rich document creator. Features include multi-tab reading, split view,
+  thumbnails, text search, annotations, dark mode, and rich-text to PDF creation
+  with zero telemetry or cloud uploads.
+grade: stable
+confinement: strict
+compression: lzo
+license: MIT
+icon: snap/gui/pdfforge-viewer.png
+
+architectures:
+  - build-on: [amd64]
+    build-for: [amd64]
+
+plugs:
+  browser-support:
+    interface: browser-support
+    allow-sandbox: true
+
+apps:
+  pdfforge-viewer:
+    command: opt/pdfforge-viewer/pdfforge-viewer --no-sandbox
+    extensions: [gnome]
+    desktop: usr/share/applications/pdfforge-viewer.desktop
+    plugs:
+      - desktop
+      - desktop-legacy
+      - home
+      - x11
+      - wayland
+      - unity7
+      - browser-support
+      - network
+      - gsettings
+      - opengl
+      - removable-media
+      - cups-control
+    environment:
+      TMPDIR: $XDG_RUNTIME_DIR
+      DISABLE_WAYLAND: '1'
+
+parts:
+  pdfforge-viewer:
+    plugin: nil
+    source: .
+    build-snaps:
+      - node/20/stable
+    stage-packages:
+      - libnspr4
+      - libnss3
+      - libxss1
+      - libsecret-1-0
+    override-build: |
+      npm ci
+      npx electron-builder --linux dir --x64
+      mkdir -p $CRAFT_PART_INSTALL/opt/pdfforge-viewer
+      cp -r dist/linux-unpacked/* $CRAFT_PART_INSTALL/opt/pdfforge-viewer/
+      chmod +x $CRAFT_PART_INSTALL/opt/pdfforge-viewer/pdfforge-viewer
+      mkdir -p $CRAFT_PART_INSTALL/usr/share/applications
+      cp snap/gui/pdfforge-viewer.desktop $CRAFT_PART_INSTALL/usr/share/applications/pdfforge-viewer.desktop
+      mkdir -p $CRAFT_PART_INSTALL/meta/gui
+      cp snap/gui/pdfforge-viewer.png $CRAFT_PART_INSTALL/meta/gui/pdfforge-viewer.png
+      cp snap/gui/pdfforge-viewer.desktop $CRAFT_PART_INSTALL/meta/gui/pdfforge-viewer.desktop
