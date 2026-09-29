@@ -21,6 +21,8 @@ jobs:
   build-snap:
     name: Build Snap & Linux Packages (Ubuntu)
     runs-on: ubuntu-22.04
+    env:
+      SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -47,8 +49,7 @@ jobs:
       - name: Publish to Snapcraft Store
         if: ${{ env.SNAPCRAFT_STORE_CREDENTIALS != '' }}
         uses: snapcore/action-publish@v1
-        env:
-          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
         with:
           snap: ${{ steps.snapcraft.outputs.snap }}
           release: ${{ github.event.inputs.release_channel || 'stable' }}
+
