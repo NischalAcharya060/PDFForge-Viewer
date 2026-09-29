@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=PDFForge Viewer
+Comment=A fast, private, offline desktop PDF viewer.
+Exec=pdfforge-viewer %U
+Terminal=false
+Type=Application
+Icon=${SNAP}/meta/gui/pdfforge-viewer.png
+StartupWMClass=PDFForge Viewer
+Categories=Office;Viewer;
+MimeType=application/pdf;
