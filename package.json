@@ -7,7 +7,7 @@
     "name": "Grdh_Ravan",
     "email": "Nischal060@gmail.com"
   },
-  "homepage": "https://github.com/NischalAcharya060/PDFForge-Viewer",
+  "homepage": "https://pdfforge.acharyanischal.com.np/",
   "license": "MIT",
   "scripts": {
     "dev": "electron .",

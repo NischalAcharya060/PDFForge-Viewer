@@ -13,15 +13,14 @@ confinement: strict
 compression: lzo
 license: MIT
 icon: snap/gui/pdfforge-viewer.png
+contact: mailto:Nischal060@gmail.com
+issues: https://github.com/NischalAcharya060/PDFForge-Viewer/issues
+source-code: https://github.com/NischalAcharya060/PDFForge-Viewer
+website: https://pdfforge.acharyanischal.com.np/
 
 architectures:
   - build-on: [amd64]
     build-for: [amd64]
-
-plugs:
-  browser-support:
-    interface: browser-support
-    allow-sandbox: true
 
 apps:
   pdfforge-viewer:
@@ -50,7 +49,7 @@ parts:
     plugin: nil
     source: .
     build-snaps:
-      - node/20/stable
+      - node/22/stable
     stage-packages:
       - libnspr4
       - libnss3
