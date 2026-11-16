@@ -225,91 +225,8 @@
 }
 
 /* Recent Files on Empty State */
-#recent-container {
-  width: 100%;
-  margin-top: 20px;
-  text-align: left;
-  background: var(--field);
-  border: 1px solid var(--field-border);
-  border-radius: 10px;
-  padding: 12px 14px;
-}
-
 #recent-container[hidden] {
   display: none !important;
-}
-
-.recent-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--muted);
-  margin-bottom: 8px;
-}
-
-.text-link-btn {
-  font-size: 11px;
-  color: var(--muted);
-  cursor: pointer;
-  text-decoration: underline;
-}
-
-.text-link-btn:hover {
-  color: var(--accent);
-}
-
-#recent-list {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.recent-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: background-color 0.1s ease;
-}
-
-.recent-item:hover {
-  background: var(--hover);
-}
-
-.recent-item svg {
-  width: 16px;
-  height: 16px;
-  color: var(--accent);
-  flex-shrink: 0;
-}
-
-.recent-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.recent-name {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.recent-path {
-  font-size: 11px;
-  color: var(--muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ==========================================================================
@@ -344,10 +261,11 @@
 
 .chrome-tab {
   height: 32px;
-  min-width: 120px;
-  max-width: 220px;
+  min-width: 140px;
+  max-width: 250px;
+  flex: 0 1 220px;
   border-radius: var(--radius-md, 6px) var(--radius-md, 6px) 0 0;
-  padding: 0 8px 0 10px;
+  padding: 0 10px 0 12px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -356,7 +274,7 @@
   background: var(--hover);
   cursor: pointer;
   position: relative;
-  transition: all 0.12s ease;
+  transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid transparent;
   border-bottom: none;
 }

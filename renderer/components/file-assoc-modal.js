@@ -333,7 +333,7 @@ export async function handleApplyFileIcon() {
 
   if (selectedIconId === "custom" && !customIconPath) {
     showToast("Please browse and select an icon file first.", "warning");
-    return { success: false };
+    return { success: false, error: "Please select an icon file." };
   }
 
   if (el.btnApplyIcon) {
@@ -409,9 +409,12 @@ export async function handleApplyAllPreferences() {
   }
 
   // 2. Also apply file association & icon changes
-  await handleApplyFileIcon();
-
-  showToast("Preferences and settings saved successfully!", "success");
+  const iconRes = await handleApplyFileIcon();
+  if (iconRes && iconRes.success === false && iconRes.error) {
+    showToast("Warning: " + iconRes.error, "warning");
+  } else {
+    showToast("Preferences and file icon saved successfully!", "success");
+  }
   hideFileAssocModal();
 }
 
@@ -486,6 +489,13 @@ export function initFileAssocModal() {
       if (card) {
         const id = card.getAttribute("data-icon-id");
         if (id) selectIconCard(id);
+      }
+    });
+
+    el.iconPickerGrid.addEventListener("change", (e) => {
+      const radio = e.target.closest(".icon-card-radio");
+      if (radio && radio.value) {
+        selectIconCard(radio.value);
       }
     });
   }

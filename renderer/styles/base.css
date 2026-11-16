@@ -31,6 +31,9 @@
   --field-border: rgba(255, 255, 255, 0.14);
   --kbd-bg: #2d2d2d;
   --kbd-border: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.22);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.38);
+  --scrollbar-track: rgba(0, 0, 0, 0.12);
   --radius-sm: 4px;
   --radius-md: 6px;
   --radius-lg: 10px;
@@ -66,8 +69,8 @@ body {
 
 /* Custom Scrollbars */
 ::-webkit-scrollbar {
-  width: 9px;
-  height: 9px;
+  width: 12px;
+  height: 12px;
 }
 
 ::-webkit-scrollbar-track {
@@ -75,13 +78,33 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--field-border);
-  border-radius: 6px;
+  background: var(--scrollbar-thumb);
+  border-radius: 8px;
   border: 2px solid transparent;
   background-clip: padding-box;
+  min-height: 48px;
+  min-width: 48px;
+  transition: background 0.15s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+  background: var(--scrollbar-thumb-hover);
+  border: 1.5px solid transparent;
   background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:active {
+  background: var(--accent);
+  border: 1.5px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-button {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }

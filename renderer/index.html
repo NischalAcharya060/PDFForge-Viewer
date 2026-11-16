@@ -219,54 +219,102 @@
 
     <div id="empty-state">
       <div class="empty-card">
-        <div class="empty-icon-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-            <path d="M14 2v6h6" />
-            <path d="M16 13H8" />
-            <path d="M16 17H8" />
-            <path d="M10 9H8" />
-          </svg>
-        </div>
-        <h1>PDFForge Viewer</h1>
-        <p class="empty-subtitle">Fast, offline &amp; private desktop PDF reader</p>
-        <div class="empty-actions">
-          <button id="btn-open-empty" class="primary-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-              <path d="M3 9h18" />
-            </svg>
-            Open PDF Document
-          </button>
-          <button id="btn-new-empty" class="feature-btn">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-              <path d="M14 2v6h6" />
-              <path d="M12 18v-6" />
-              <path d="M9 15h6" />
-            </svg>
-            New Document
-          </button>
-        </div>
-        <p class="empty-hint">or drop a PDF anywhere in this window</p>
-        
-        <div id="recent-container" hidden>
-          <div class="recent-header">
-            <span>Recent Files</span>
-            <button id="btn-clear-recent" class="text-link-btn">Clear</button>
+        <!-- Header: Branding & Welcome -->
+        <div class="empty-header">
+          <div class="empty-brand-group">
+            <div class="empty-icon-wrap">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <path d="M14 2v6h6" />
+                <path d="M16 13H8" />
+                <path d="M16 17H8" />
+                <path d="M10 9H8" />
+              </svg>
+            </div>
+            <div class="empty-brand-text">
+              <h1>PDFForge Viewer</h1>
+              <p class="empty-subtitle">Fast, offline &amp; private desktop PDF reader and document creator</p>
+            </div>
           </div>
-          <div id="recent-list"></div>
+          <div class="empty-header-actions">
+            <span id="empty-version-label" class="empty-version-badge">v1.2.0</span>
+          </div>
         </div>
 
-        <div class="empty-shortcuts">
-          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>N</kbd> New Document</span>
-          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>S</kbd> Save Document as PDF</span>
-          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>O</kbd> Open</span>
-          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>F</kbd> Find</span>
-          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>P</kbd> Print</span>
-          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>R</kbd> Rotate</span>
-          <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>,</kbd> Settings</span>
-          <span class="shortcut-chip"><kbd>?</kbd> Help</span>
+        <!-- Main Body: 2-Column Responsive Workspace Grid -->
+        <div class="empty-grid">
+          <!-- Left Column: Actions & Drop Zone -->
+          <div class="empty-actions-col">
+            <div class="empty-action-card primary-action-card">
+              <div class="action-card-header">
+                <span class="action-card-title">Open Document</span>
+                <span class="action-shortcut-pill"><kbd>Ctrl</kbd>+<kbd>O</kbd></span>
+              </div>
+              <p class="action-card-desc">Open and read existing PDF documents with zero network access</p>
+              <button id="btn-open-empty" class="primary-btn empty-btn-full" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                  <path d="M3 9h18" />
+                </svg>
+                Browse &amp; Open PDF…
+              </button>
+              <div class="empty-drop-zone-cue">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                  <polyline points="17 8 12 3 7 8"/>
+                  <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                <span>or drop a PDF anywhere in this window</span>
+              </div>
+            </div>
+
+            <div class="empty-action-card">
+              <div class="action-card-header">
+                <span class="action-card-title">New Document</span>
+                <span class="action-shortcut-pill"><kbd>Ctrl</kbd>+<kbd>N</kbd></span>
+              </div>
+              <p class="action-card-desc">Write rich text and export high-quality formatted PDFs directly</p>
+              <button id="btn-new-empty" class="feature-btn empty-btn-full" type="button">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                  <path d="M14 2v6h6" />
+                  <path d="M12 18v-6" />
+                  <path d="M9 15h6" />
+                </svg>
+                Create Word Document
+              </button>
+            </div>
+          </div>
+
+          <!-- Right Column: Recent Documents -->
+          <div class="empty-recent-col">
+            <div id="recent-container" class="recent-panel">
+              <div class="recent-header">
+                <div class="recent-header-title">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 15 15"/>
+                  </svg>
+                  <span>Recent Documents</span>
+                </div>
+                <button id="btn-clear-recent" class="text-link-btn" type="button">Clear</button>
+              </div>
+              <div id="recent-list" class="recent-list-scroll"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Footer: Shortcuts Cheat-Sheet -->
+        <div class="empty-shortcuts-bar">
+          <span class="shortcuts-bar-title">Quick Shortcuts:</span>
+          <div class="empty-shortcuts">
+            <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>O</kbd> Open</span>
+            <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>N</kbd> New Document</span>
+            <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>T</kbd> New Tab</span>
+            <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> Split View</span>
+            <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>,</kbd> Settings</span>
+            <span class="shortcut-chip"><kbd>?</kbd> Help</span>
+          </div>
         </div>
       </div>
     </div>
@@ -651,7 +699,7 @@
           <div class="about-title-box">
             <div class="about-title-row">
               <span class="about-app-name">PDFForge Viewer</span>
-              <span id="about-version-badge" class="about-badge">v1.1.0</span>
+              <span id="about-version-badge" class="about-badge">v1.2.0</span>
             </div>
             <p class="about-desc">Fast, offline &amp; private desktop PDF reader and document suite designed for simplicity and privacy.</p>
           </div>

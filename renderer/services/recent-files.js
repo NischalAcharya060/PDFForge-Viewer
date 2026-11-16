@@ -20,7 +20,7 @@ export function saveRecentFile(name, filePath) {
     let list = getRecentFiles();
     list = list.filter((item) => item.path !== filePath);
     list.unshift({ name, path: filePath, time: Date.now() });
-    if (list.length > 5) list = list.slice(0, 5);
+    if (list.length > 8) list = list.slice(0, 8);
     localStorage.setItem(RECENT_KEY, JSON.stringify(list));
     renderRecentFiles();
   } catch {}
@@ -33,24 +33,42 @@ export function clearRecentFiles() {
 
 export function renderRecentFiles() {
   const list = getRecentFiles();
+  if (!el.recentContainer) return;
+  el.recentContainer.hidden = false;
   if (!list.length) {
-    el.recentContainer.hidden = true;
+    if (el.btnClearRecent) el.btnClearRecent.hidden = true;
+    el.recentList.innerHTML = `
+      <div class="recent-empty-placeholder">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" class="recent-empty-icon">
+          <circle cx="12" cy="12" r="10"/>
+          <polyline points="12 6 12 12 15 15"/>
+        </svg>
+        <span class="recent-empty-title">No recent documents</span>
+        <span class="recent-empty-desc">Open a PDF or create a document to quickly resume reading here.</span>
+      </div>
+    `;
     return;
   }
-  el.recentContainer.hidden = false;
+  if (el.btnClearRecent) el.btnClearRecent.hidden = false;
   el.recentList.innerHTML = "";
   for (const item of list) {
     const row = document.createElement("div");
     row.className = "recent-item";
+    row.title = item.path || item.name;
     row.innerHTML = `
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-        <path d="M14 2v6h6"/>
-      </svg>
+      <div class="recent-item-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+          <path d="M14 2v6h6"/>
+        </svg>
+      </div>
       <div class="recent-info">
         <span class="recent-name">${escapeHtml(item.name)}</span>
         <span class="recent-path">${escapeHtml(item.path || item.name)}</span>
       </div>
+      <svg class="recent-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="9 18 15 12 9 6"/>
+      </svg>
     `;
     row.addEventListener("click", () => {
       openRecentFile(item);

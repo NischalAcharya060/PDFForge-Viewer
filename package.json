@@ -1,6 +1,6 @@
 {
   "name": "pdfforge-viewer",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "A fast, private, offline desktop PDF viewer.",
   "main": "electron/main.js",
   "author": {
@@ -76,7 +76,7 @@
     "nsis": {
       "oneClick": false,
       "perMachine": false,
-      "artifactName": "PDFForge-Setup.${ext}",
+      "artifactName": "${productName} Setup ${version}.${ext}",
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,

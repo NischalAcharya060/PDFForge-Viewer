@@ -18,6 +18,9 @@
   --field-border: rgba(0, 0, 0, 0.14);
   --kbd-bg: #f5f5f5;
   --kbd-border: rgba(0, 0, 0, 0.15);
+  --scrollbar-thumb: rgba(0, 0, 0, 0.22);
+  --scrollbar-thumb-hover: rgba(0, 0, 0, 0.38);
+  --scrollbar-track: rgba(0, 0, 0, 0.04);
 }
 
 :root[data-theme="dark"] {
@@ -40,6 +43,9 @@
   --field-border: rgba(255, 255, 255, 0.14);
   --kbd-bg: #2d2d2d;
   --kbd-border: rgba(255, 255, 255, 0.15);
+  --scrollbar-thumb: rgba(255, 255, 255, 0.22);
+  --scrollbar-thumb-hover: rgba(255, 255, 255, 0.38);
+  --scrollbar-track: rgba(0, 0, 0, 0.12);
 }
 
 /* ==========================================================================

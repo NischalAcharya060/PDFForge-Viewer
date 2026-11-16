@@ -70,13 +70,25 @@ function makeTestPdf() {
   return Buffer.concat([body, Buffer.from(xref), Buffer.from(trailer)]);
 }
 
+async function safeWriteFile(filePath, buffer) {
+  for (let attempt = 0; attempt < 5; attempt++) {
+    try {
+      await fs.writeFile(filePath, buffer);
+      return;
+    } catch (err) {
+      if (attempt === 4) throw err;
+      await new Promise((r) => setTimeout(r, 400));
+    }
+  }
+}
+
 app.whenReady().then(async () => {
   registerProtocol();
 
   const { ipcMain } = require("electron");
   ipcMain.handle("app:get-info", async () => ({
     name: "PDFForge Viewer",
-    version: "1.1.0",
+    version: "1.2.0",
     electron: process.versions.electron || "",
     chrome: process.versions.chrome || "",
     node: process.versions.node || "",
@@ -107,23 +119,27 @@ app.whenReady().then(async () => {
   await win.loadURL("app://renderer/index.html");
   await new Promise((r) => setTimeout(r, 1200));
 
-  // Ensure dark theme at start
+  // Ensure dark theme at start and populate sample recent documents for clean screenshots
   await win.webContents.executeJavaScript(`
     localStorage.setItem("viewer-theme", "dark");
-    document.documentElement.dataset.theme = "dark";
+    localStorage.setItem("pdfforge-recent-files", JSON.stringify([
+      { name: "Annual_Financial_Report_2026.pdf", path: "C:\\\\Documents\\\\Reports\\\\Annual_Financial_Report_2026.pdf", time: Date.now() - 15000 },
+      { name: "Project_Architecture_Overview.pdf", path: "C:\\\\Documents\\\\Projects\\\\Project_Architecture_Overview.pdf", time: Date.now() - 75000 }
+    ]));
   `);
-  await new Promise((r) => setTimeout(r, 400));
+  await win.reload();
+  await new Promise((r) => setTimeout(r, 1200));
 
   // Capture Home / Empty screen
   let img = await win.capturePage();
-  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-home.png"), img.toPNG());
+  await safeWriteFile(path.join(__dirname, "..", "screenshots", "current-home.png"), img.toPNG());
   console.log("Saved current-home.png");
 
   // Open About Modal
   win.webContents.send("menu:command", "about");
   await new Promise((r) => setTimeout(r, 600));
   img = await win.capturePage();
-  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-about.png"), img.toPNG());
+  await safeWriteFile(path.join(__dirname, "..", "screenshots", "current-about.png"), img.toPNG());
   console.log("Saved current-about.png");
 
   // Close About Modal
@@ -131,20 +147,31 @@ app.whenReady().then(async () => {
   await new Promise((r) => setTimeout(r, 300));
 
   // Open PDF Document
+  const pdfBytes = await fs.readFile(path.join(__dirname, "..", "rich-smoke.pdf"));
   win.webContents.send("open-file", {
     name: "Sample Document.pdf",
-    data: new Uint8Array(makeTestPdf()),
+    data: new Uint8Array(pdfBytes),
   });
-  await new Promise((r) => setTimeout(r, 1500));
+  for (let i = 0; i < 50; i++) {
+    await new Promise((r) => setTimeout(r, 150));
+    const ready = await win.webContents.executeJavaScript(`
+      Boolean(window.__state?.pages?.[0]?.rendered)
+    `);
+    if (ready) break;
+  }
+  await win.webContents.executeJavaScript(`
+    new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))
+  `);
+  await new Promise((r) => setTimeout(r, 600));
   img = await win.capturePage();
-  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-viewer.png"), img.toPNG());
+  await safeWriteFile(path.join(__dirname, "..", "screenshots", "current-viewer.png"), img.toPNG());
   console.log("Saved current-viewer.png");
 
   // Open Print Preview in Dark Theme
   await win.webContents.executeJavaScript("document.getElementById('btn-print').click()");
   await new Promise((r) => setTimeout(r, 1000));
   img = await win.capturePage();
-  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-print-preview-dark.png"), img.toPNG());
+  await safeWriteFile(path.join(__dirname, "..", "screenshots", "current-print-preview-dark.png"), img.toPNG());
   console.log("Saved current-print-preview-dark.png");
 
   // Close Print Preview
@@ -155,7 +182,7 @@ app.whenReady().then(async () => {
   await win.webContents.executeJavaScript("document.getElementById('btn-new').click()");
   await new Promise((r) => setTimeout(r, 1000));
   img = await win.capturePage();
-  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-editor.png"), img.toPNG());
+  await safeWriteFile(path.join(__dirname, "..", "screenshots", "current-editor.png"), img.toPNG());
   console.log("Saved current-editor.png");
 
   // Now switch to Light Theme deterministically
@@ -163,14 +190,19 @@ app.whenReady().then(async () => {
     localStorage.setItem("viewer-theme", "light");
     document.documentElement.dataset.theme = "light";
     document.body.offsetHeight;
+    if (window.__quill) {
+      window.__quill.setText("Modern System App - Word Rich Document Editor\\n\\nPDFForge Viewer delivers pixel-perfect document rendering, Microsoft Store ready design system, and unified print preview support for both PDF documents and Word editor documents.");
+    }
   `);
   await new Promise((r) => setTimeout(r, 600));
 
+  // Capture Light Editor
+  img = await win.capturePage();
+  await safeWriteFile(path.join(__dirname, "..", "screenshots", "current-light-editor.png"), img.toPNG());
+  console.log("Saved current-light-editor.png");
+
   // Open Print Preview in Light Theme (from Word Editor)
   await win.webContents.executeJavaScript(`
-    if (window.__quill) {
-      window.__quill.setText("Modern System App - Print Preview\\n\\nPDFForge Viewer delivers pixel-perfect document rendering, Microsoft Store ready design system, and unified print preview support for both PDF documents and Word editor documents.");
-    }
     const printBtn = document.getElementById('btn-print');
     if (printBtn) {
       printBtn.disabled = false;
@@ -179,35 +211,26 @@ app.whenReady().then(async () => {
   `);
   await new Promise((r) => setTimeout(r, 1000));
   img = await win.capturePage();
-  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-print-preview-light.png"), img.toPNG());
+  await safeWriteFile(path.join(__dirname, "..", "screenshots", "current-print-preview-light.png"), img.toPNG());
   console.log("Saved current-print-preview-light.png");
 
   // Close Print Preview
-  await win.webContents.executeJavaScript("document.getElementById('btn-print-preview-close').click()");
-  await new Promise((r) => setTimeout(r, 400));
-
-  img = await win.capturePage();
-  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-light-editor.png"), img.toPNG());
-  console.log("Saved current-light-editor.png");
-
-  // Light theme home: close editor and open tabs to show clean empty home
   await win.webContents.executeJavaScript(`
-    window.confirm = () => true;
-    const editorClose = document.getElementById('btn-editor-close');
-    if (editorClose) editorClose.click();
-  `);
-  await new Promise((r) => setTimeout(r, 400));
-
-  await win.webContents.executeJavaScript(`
-    window.confirm = () => true;
-    const closes = Array.from(document.querySelectorAll('.chrome-tab-close'));
-    for (const c of closes) {
-      try { c.click(); } catch {}
+    document.getElementById('btn-print-preview-close')?.click();
+    if (document.getElementById('print-preview-modal')) {
+      document.getElementById('print-preview-modal').hidden = true;
     }
   `);
-  await new Promise((r) => setTimeout(r, 600));
+  await new Promise((r) => setTimeout(r, 400));
+
+  // Light theme home: reload directly in light mode to capture a clean New Tab / Home screen
+  await win.webContents.executeJavaScript(`
+    localStorage.setItem("viewer-theme", "light");
+  `);
+  await win.reload();
+  await new Promise((r) => setTimeout(r, 1200));
   img = await win.capturePage();
-  await fs.writeFile(path.join(__dirname, "..", "screenshots", "current-light-home.png"), img.toPNG());
+  await safeWriteFile(path.join(__dirname, "..", "screenshots", "current-light-home.png"), img.toPNG());
   console.log("Saved current-light-home.png");
 
   app.exit(0);

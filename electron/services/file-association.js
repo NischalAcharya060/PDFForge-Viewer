@@ -57,18 +57,31 @@ function notifyShellChange() {
       return;
     }
 
-    const scriptPath = path.join(__dirname, "..", "..", "scripts", "notify-shell.ps1");
-    if (fs.existsSync(scriptPath)) {
-      execFile(
-        "powershell.exe",
-        ["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", scriptPath],
-        { timeout: 3000 },
-        () => {}
-      );
-    }
+    // On Windows, broadcast SHChangeNotify directly via PowerShell in-memory
+    // without relying on relative .ps1 files that fail inside packaged app.asar archives.
+    // 0x08000000 = SHCNE_ASSOCCHANGED, 0x00002000 = SHCNE_UPDATEIMAGE
+    const psScript = `
+$code = @"
+using System;
+using System.Runtime.InteropServices;
+public class ShellNotifier {
+    [DllImport("shell32.dll", SetLastError = true)]
+    public static extern void SHChangeNotify(uint wEventId, uint uFlags, IntPtr dwItem1, IntPtr dwItem2);
+}
+"@
+try {
+    Add-Type -TypeDefinition $code -ErrorAction Stop
+    [ShellNotifier]::SHChangeNotify(0x08000000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
+    [ShellNotifier]::SHChangeNotify(0x00002000, 0, [IntPtr]::Zero, [IntPtr]::Zero)
+} catch {}
+`;
+    const encoded = Buffer.from(psScript, "utf16le").toString("base64");
 
-    // Secondary icon cache flush via ie4uinit
-    exec("ie4uinit.exe -show", { timeout: 2000 }, () => {
+    const p1 = runCommand("powershell.exe", ["-NoProfile", "-NonInteractive", "-EncodedCommand", encoded], 5000);
+    const p2 = runCommand("ie4uinit.exe", ["-show"], 3000);
+    const p3 = runCommand("ie4uinit.exe", ["-kioskupdate"], 3000);
+
+    Promise.allSettled([p1, p2, p3]).finally(() => {
       resolve();
     });
   });
@@ -303,12 +316,20 @@ async function registerAsDefault() {
     : `"${process.execPath}" "${path.resolve(__dirname, "..", "..")}" "%1"`;
 
   const prefs = getIconPreferences();
-  let targetIconPath = getAssetIconPath(prefs.selectedIconId);
-  if (prefs.selectedIconId === "custom" && prefs.customIconPath && fs.existsSync(prefs.customIconPath)) {
-    targetIconPath = prefs.customIconPath;
+  let targetIconPath = "";
+  try {
+    const iconRes = await ensurePersistentIcon(prefs.selectedIconId, prefs.customIconPath);
+    targetIconPath = iconRes.targetIconPath || "";
+  } catch {
+    // fallback
   }
-  if (!fs.existsSync(targetIconPath)) {
-    targetIconPath = getAssetIconPath("brand");
+  if (!targetIconPath || !fs.existsSync(targetIconPath)) {
+    try {
+      const fallbackRes = await ensurePersistentIcon("brand", null);
+      targetIconPath = fallbackRes.targetIconPath || getAssetIconPath("brand");
+    } catch {
+      targetIconPath = getAssetIconPath("brand");
+    }
   }
 
   const regOps = [
@@ -316,10 +337,13 @@ async function registerAsDefault() {
     ["add", "HKCU\\Software\\Classes\\.pdf\\OpenWithProgids", "/v", "PDFForge Viewer", "/t", "REG_SZ", "/d", "", "/f"],
     ["add", "HKCU\\Software\\Classes\\PDFForge Viewer", "/ve", "/t", "REG_SZ", "/d", "PDFForge Viewer document", "/f"],
     ["add", "HKCU\\Software\\Classes\\PDFForge Viewer\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
+    ["add", "HKCU\\Software\\Classes\\PDFForge Viewer.pdf\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
     ["add", "HKCU\\Software\\Classes\\PDFForge Viewer\\shell\\open\\command", "/ve", "/t", "REG_SZ", "/d", openCmd, "/f"],
     ["add", "HKCU\\Software\\Classes\\Applications\\PDFForge Viewer.exe\\SupportedTypes", "/v", ".pdf", "/t", "REG_SZ", "/d", "", "/f"],
     ["add", "HKCU\\Software\\Classes\\Applications\\PDFForge Viewer.exe\\shell\\open\\command", "/ve", "/t", "REG_SZ", "/d", openCmd, "/f"],
     ["add", "HKCU\\Software\\Classes\\Applications\\PDFForge Viewer.exe\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
+    ["add", "HKCU\\Software\\Classes\\Applications\\pdfforge-viewer.exe\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
+    ["add", "HKCU\\Software\\Classes\\SystemFileAssociations\\.pdf\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
     ["add", "HKCU\\Software\\PDFForge Viewer\\Capabilities", "/v", "ApplicationDescription", "/t", "REG_SZ", "/d", "A fast, private, offline desktop PDF viewer.", "/f"],
     ["add", "HKCU\\Software\\PDFForge Viewer\\Capabilities", "/v", "ApplicationName", "/t", "REG_SZ", "/d", "PDFForge Viewer", "/f"],
     ["add", "HKCU\\Software\\PDFForge Viewer\\Capabilities\\FileAssociations", "/v", ".pdf", "/t", "REG_SZ", "/d", "PDFForge Viewer", "/f"],
@@ -345,6 +369,30 @@ async function registerAsDefault() {
     isDefault: status.isDefault,
     message: "Registered as PDF reader! Click \"Set as default\" on the Windows page that opened.",
   };
+}
+
+/**
+ * Ensure the requested icon is copied to a permanent, un-sandboxed userData location
+ * so Windows Explorer can reliably access the .ico file (outside of app.asar).
+ */
+async function ensurePersistentIcon(iconId, customPath) {
+  const userDataDir = app.getPath("userData");
+  if (iconId === "custom") {
+    if (!customPath || !fs.existsSync(customPath)) {
+      return { error: "Custom icon file does not exist." };
+    }
+    const persistentCustomPath = path.join(userDataDir, "custom-pdf-icon.ico");
+    await fsPromises.copyFile(customPath, persistentCustomPath);
+    return { targetIconPath: persistentCustomPath };
+  }
+
+  const srcIco = getAssetIconPath(iconId, "ico");
+  if (!fs.existsSync(srcIco)) {
+    return { error: `Preset icon '${iconId}' not found.` };
+  }
+  const persistentPresetPath = path.join(userDataDir, `pdf-icon-${iconId}.ico`);
+  await fsPromises.copyFile(srcIco, persistentPresetPath);
+  return { targetIconPath: persistentPresetPath };
 }
 
 /**
@@ -405,33 +453,33 @@ async function applyPdfFileIcon({ iconId, customPath }) {
     return { success: false, message: "File icon customization is only supported on Windows and Linux." };
   }
 
-  let targetIconPath = "";
-
-  if (iconId === "custom") {
-    if (!customPath || !fs.existsSync(customPath)) {
-      return { success: false, error: "Custom icon file does not exist." };
-    }
-    // Copy custom icon to permanent userData location
-    const persistentCustomPath = path.join(userDataDir, "custom-pdf-icon.ico");
-    await fsPromises.copyFile(customPath, persistentCustomPath);
-    targetIconPath = persistentCustomPath;
-  } else {
-    const srcIco = getAssetIconPath(iconId);
-    if (!fs.existsSync(srcIco)) {
-      return { success: false, error: `Preset icon '${iconId}' not found.` };
-    }
-    // Copy preset icon to permanent userData location so path remains valid
-    const persistentPresetPath = path.join(userDataDir, `pdf-icon-${iconId}.ico`);
-    await fsPromises.copyFile(srcIco, persistentPresetPath);
-    targetIconPath = persistentPresetPath;
+  const iconResult = await ensurePersistentIcon(iconId, customPath);
+  if (iconResult.error) {
+    return { success: false, error: iconResult.error };
   }
+  const targetIconPath = iconResult.targetIconPath;
 
-  // Update registry keys
+  // Update all relevant registry keys to ensure Windows Explorer picks up the icon
   const regUpdates = [
     ["add", "HKCU\\Software\\Classes\\PDFForge Viewer\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
+    ["add", "HKCU\\Software\\Classes\\PDFForge Viewer.pdf\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
     ["add", "HKCU\\Software\\Classes\\Applications\\PDFForge Viewer.exe\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
+    ["add", "HKCU\\Software\\Classes\\Applications\\pdfforge-viewer.exe\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
     ["add", "HKCU\\Software\\Classes\\.pdf\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
+    ["add", "HKCU\\Software\\Classes\\SystemFileAssociations\\.pdf\\DefaultIcon", "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"],
   ];
+
+  try {
+    const status = await checkDefaultStatus();
+    if (status && status.progId && typeof status.progId === "string") {
+      const cleanProgId = status.progId.trim();
+      if (cleanProgId && !cleanProgId.includes("\\") && cleanProgId !== "PDFForge Viewer") {
+        regUpdates.push(["add", `HKCU\\Software\\Classes\\${cleanProgId}\\DefaultIcon`, "/ve", "/t", "REG_SZ", "/d", targetIconPath, "/f"]);
+      }
+    }
+  } catch {
+    // ignore query failure
+  }
 
   for (const op of regUpdates) {
     await runRegCommand(op);
@@ -455,6 +503,27 @@ async function applyPdfFileIcon({ iconId, customPath }) {
     iconPath: targetIconPath,
     message: "PDF file icon updated in Windows Explorer!",
   };
+}
+
+/**
+ * Synchronize saved icon preference on startup (restores icon if overwritten by installer or OS update)
+ */
+async function syncSavedIconPreference() {
+  if (process.platform !== "win32") return;
+  try {
+    const configFile = getConfigFile();
+    if (fs.existsSync(configFile)) {
+      const data = JSON.parse(fs.readFileSync(configFile, "utf8"));
+      if (data && data.selectedIconId) {
+        await applyPdfFileIcon({
+          iconId: data.selectedIconId,
+          customPath: data.customIconPath || null,
+        });
+      }
+    }
+  } catch (err) {
+    console.warn("Could not sync saved icon preference:", err);
+  }
 }
 
 /**
@@ -519,5 +588,6 @@ module.exports = {
   chooseCustomIconDialog,
   openDefaultAppsSettings,
   notifyShellChange,
+  syncSavedIconPreference,
 };
 

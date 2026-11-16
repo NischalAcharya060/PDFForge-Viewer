@@ -16,7 +16,7 @@ export async function getOrFetchAppInfo() {
   if (!cachedAppInfo) {
     cachedAppInfo = {
       name: "PDFForge Viewer",
-      version: "1.1.0",
+      version: "1.2.0",
       electron: "Desktop",
       chrome: "Chromium",
       node: "Node.js",
@@ -33,7 +33,7 @@ export async function showAboutModal() {
   hideAllOverlays();
   if (el.aboutModal) el.aboutModal.hidden = false;
   const info = await getOrFetchAppInfo();
-  const appVersion = info.version || "1.1.0";
+  const appVersion = info.version || "1.2.0";
   if (el.aboutVersionBadge) el.aboutVersionBadge.textContent = `v${appVersion}`;
   if (el.emptyVersionLabel) el.emptyVersionLabel.textContent = `v${appVersion}`;
 
@@ -69,7 +69,7 @@ export async function showAboutModal() {
 
 export async function copyAboutInfo() {
   const info = await getOrFetchAppInfo();
-  const appVersion = info.version || "1.1.0";
+  const appVersion = info.version || "1.2.0";
   const platformName = info.platform === "win32" ? "Windows" : info.platform === "darwin" ? "macOS" : info.platform === "linux" ? "Linux" : (info.platform || "Desktop");
   const archString = info.arch === "x64" ? "64-bit" : info.arch === "arm64" ? "ARM 64-bit" : info.arch || "";
   const osString = `${platformName} ${archString}`.trim();

@@ -28,6 +28,7 @@ import { savePdf } from '../editor/editor.js';
 import { escapeHtml, clamp } from '../../utils/helpers.js';
 import { getDocument } from '../../pdfjs/pdf.mjs';
 import { getInitialZoomAndLayout } from '../../services/settings-service.js';
+import { renderRecentFiles } from '../../services/recent-files.js';
 import {
   buildThumbnails,
   applyThumbnails,
@@ -401,6 +402,7 @@ export function restoreTab(tab) {
     el.emptyState.hidden = false;
     el.docName.textContent = "PDFForge Viewer";
     document.title = "PDFForge Viewer";
+    renderRecentFiles();
     updateControls();
   }
 

@@ -413,6 +413,13 @@ if (!gotLock) {
     mainWindow = createWindow();
     buildMenu();
 
+    // Re-apply and sync saved PDF file icon to Windows Explorer registry on startup
+    if (process.platform === "win32") {
+      fileAssoc.syncSavedIconPreference().catch((err) => {
+        console.warn("Could not sync saved PDF file icon on startup:", err);
+      });
+    }
+
     const first = await firstPdfArg(process.argv);
     if (first) pendingFile = first;
 

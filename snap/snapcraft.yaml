@@ -1,6 +1,6 @@
 name: pdfforge-viewer
 base: core22
-version: '1.1.0'
+version: '1.2.0'
 title: PDFForge Viewer
 summary: A fast, private, offline desktop PDF viewer
 description: |
