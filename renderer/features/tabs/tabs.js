@@ -649,8 +649,15 @@ export async function toggleSplitView() {
 
 export async function openSplitView(tab) {
   if (!tab) return;
+  if (splitTabId && el.secondaryPageHost) {
+    const prevSplitTab = tabs.find((t) => t.id === splitTabId);
+    if (prevSplitTab) {
+      prevSplitTab.splitScrollTop = el.secondaryPageHost.scrollTop;
+    }
+  }
   setIsSplitActive(true);
   setSplitTabId(tab.id);
+  setupSecondaryPageHostScroll();
   if (el.splitDivider) el.splitDivider.hidden = false;
   if (el.secondaryPane) el.secondaryPane.hidden = false;
   if (el.btnSplitView) el.btnSplitView.classList.add("active");
@@ -660,6 +667,10 @@ export async function openSplitView(tab) {
 }
 
 export function closeSplitView() {
+  const curSplitTab = tabs.find((t) => t.id === splitTabId);
+  if (curSplitTab && el.secondaryPageHost) {
+    curSplitTab.splitScrollTop = el.secondaryPageHost.scrollTop;
+  }
   setIsSplitActive(false);
   setSplitTabId(null);
   disconnectSplitObserver();
@@ -800,9 +811,54 @@ export async function renderSplitDoc(tab) {
       d.canvas.dataset.splitIndex = String(i);
       splitObserver.observe(d.canvas.parentElement);
     });
+
+    const targetScroll = typeof tab.splitScrollTop === "number" ? tab.splitScrollTop : (tab.scrollTop || 0);
+    if (targetScroll > 0) {
+      setTimeout(() => {
+        if (el.secondaryPageHost) {
+          el.secondaryPageHost.scrollTop = targetScroll;
+          updateSplitPageIndicator();
+        }
+      }, 30);
+    } else {
+      updateSplitPageIndicator();
+    }
   } catch (err) {
     console.warn("Could not render split document:", err);
   }
+}
+
+let secondaryScrollBound = false;
+export function setupSecondaryPageHostScroll() {
+  if (!el.secondaryPageHost || secondaryScrollBound) return;
+  secondaryScrollBound = true;
+  el.secondaryPageHost.addEventListener("scroll", () => {
+    const curSplitTab = tabs.find((t) => t.id === splitTabId);
+    if (curSplitTab) {
+      curSplitTab.splitScrollTop = el.secondaryPageHost.scrollTop;
+    }
+    updateSplitPageIndicator();
+  }, { passive: true });
+}
+
+export function updateSplitPageIndicator() {
+  if (!el.splitPageIndicator || !splitDoc || !el.secondaryPageHost) return;
+  const numPages = splitDoc.numPages || 1;
+  const mid = el.secondaryPageHost.scrollTop + el.secondaryPageHost.clientHeight / 2;
+  const pageNodes = el.secondaryPageHost.querySelectorAll(".pdf-page");
+  let curPage = 1;
+  for (let i = 0; i < pageNodes.length; i++) {
+    if (pageNodes[i].offsetTop <= mid) {
+      curPage = i + 1;
+    } else {
+      break;
+    }
+  }
+  const curSplitTab = tabs.find((t) => t.id === splitTabId);
+  if (curSplitTab) {
+    curSplitTab.splitCurrentPage = curPage;
+  }
+  el.splitPageIndicator.textContent = `Page ${curPage} of ${numPages}`;
 }
 
 export function setupSplitDivider() {

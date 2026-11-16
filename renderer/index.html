@@ -156,7 +156,7 @@
             <line x1="12" y1="17" x2="12.01" y2="17" />
           </svg>
         </button>
-        <button id="btn-settings" class="icon-btn" title="Settings &amp; Preferences (Ctrl+,)">
+        <button id="btn-settings" class="icon-btn" title="Settings (Ctrl+,)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
@@ -674,7 +674,7 @@
           <div class="shortcut-row"><span class="shortcut-desc">Toggle Sidebar</span><span><kbd>T</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Toggle Dark Mode</span><span><kbd>D</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Document Properties</span><span><kbd>Ctrl</kbd> + <kbd>D</kbd></span></div>
-          <div class="shortcut-row"><span class="shortcut-desc">Preferences</span><span><kbd>Ctrl</kbd> + <kbd>,</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Settings</span><span><kbd>Ctrl</kbd> + <kbd>,</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">About PDFForge Viewer</span><span><kbd>Help Menu</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Show Shortcuts</span><span><kbd>?</kbd> or <kbd>F1</kbd></span></div>
         </div>
@@ -737,7 +737,7 @@
             <circle cx="12" cy="12" r="3"/>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
           </svg>
-          <span>Settings &amp; Preferences</span>
+          <span>Settings</span>
           <button id="btn-file-assoc-close" class="chrome-tab-close" type="button" title="Close (Esc)" style="margin-left: auto;">&times;</button>
         </div>
 
@@ -1133,7 +1133,7 @@
               <div class="setting-row">
                 <div class="setting-info">
                   <span class="setting-label">Remember Last Read Page</span>
-                  <span class="setting-help">Automatically resume where you left off when reopening PDFs</span>
+                  <span class="setting-help">Persist last read page across app closures (off by default; tabs remember position during session)</span>
                 </div>
                 <label class="setting-switch">
                   <input type="checkbox" id="setting-remember-page" />
@@ -1155,7 +1155,7 @@
                 <span class="section-title">Reset Settings</span>
               </div>
               <p class="section-desc">
-                Reset all preferences to factory defaults (including 125% default zoom).
+                Reset all settings to factory defaults (including 125% default zoom).
               </p>
               <div>
                 <button id="btn-settings-reset" class="danger-btn" type="button">Reset All to Factory Defaults</button>

@@ -216,7 +216,7 @@ export function populateSettingsForm(settings = getSettings()) {
     el.settingInvertColors.checked = Boolean(settings.invertPdfColors);
   }
   if (el.settingSmoothScroll) {
-    el.settingSmoothScroll.checked = settings.smoothScroll !== false;
+    el.settingSmoothScroll.checked = Boolean(settings.smoothScroll);
   }
   if (el.settingSidebarState) {
     el.settingSidebarState.value = settings.sidebarDefaultState || "closed";
@@ -225,7 +225,7 @@ export function populateSettingsForm(settings = getSettings()) {
     el.settingSidebarTab.value = settings.defaultSidebarTab || "thumbs";
   }
   if (el.settingRememberPage) {
-    el.settingRememberPage.checked = settings.restoreLastPage !== false;
+    el.settingRememberPage.checked = Boolean(settings.restoreLastPage);
   }
   if (el.settingEditorPaper) {
     el.settingEditorPaper.value = settings.editorPaperSize || "a4";
@@ -373,10 +373,10 @@ export async function handleApplyAllPreferences() {
     defaultLayout: el.settingDefaultLayout ? el.settingDefaultLayout.value : "single",
     theme: el.settingTheme ? el.settingTheme.value : "system",
     invertPdfColors: el.settingInvertColors ? Boolean(el.settingInvertColors.checked) : false,
-    smoothScroll: el.settingSmoothScroll ? Boolean(el.settingSmoothScroll.checked) : true,
+    smoothScroll: el.settingSmoothScroll ? Boolean(el.settingSmoothScroll.checked) : false,
     sidebarDefaultState: el.settingSidebarState ? el.settingSidebarState.value : "closed",
     defaultSidebarTab: el.settingSidebarTab ? el.settingSidebarTab.value : "thumbs",
-    restoreLastPage: el.settingRememberPage ? Boolean(el.settingRememberPage.checked) : true,
+    restoreLastPage: el.settingRememberPage ? Boolean(el.settingRememberPage.checked) : false,
     editorPaperSize: el.settingEditorPaper ? el.settingEditorPaper.value : "a4",
     editorFontSize: el.settingEditorFontSize ? Number(el.settingEditorFontSize.value) || 11 : 11,
     editorLineSpacing: el.settingEditorLineSpacing ? Number(el.settingEditorLineSpacing.value) || 1.15 : 1.15,
@@ -413,7 +413,7 @@ export async function handleApplyAllPreferences() {
   if (iconRes && iconRes.success === false && iconRes.error) {
     showToast("Warning: " + iconRes.error, "warning");
   } else {
-    showToast("Preferences and file icon saved successfully!", "success");
+    showToast("Settings and file icon saved successfully!", "success");
   }
   hideFileAssocModal();
 }

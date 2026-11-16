@@ -52,8 +52,6 @@ let dragDepth = 0;
 
 function bindEvents() {
   if (el.btnNewTab) el.btnNewTab.addEventListener("click", () => createNewTab());
-  if (el.btnSplitView) el.btnSplitView.addEventListener("click", toggleSplitView);
-  if (el.btnCloseSplit) el.btnCloseSplit.addEventListener("click", closeSplitView);
   if (el.btnTwoPage) el.btnTwoPage.addEventListener("click", toggleTwoPage);
   if (el.btnAddPage) {
     el.btnAddPage.addEventListener("click", (e) => {

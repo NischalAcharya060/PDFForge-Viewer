@@ -205,9 +205,9 @@ function buildMenu() {
         },
         { type: "separator" },
         {
-          label: "Preferences…",
+          label: "Settings…",
           accelerator: "CmdOrCtrl+,",
-          click: () => send("preferences"),
+          click: () => send("settings"),
         },
       ],
     },

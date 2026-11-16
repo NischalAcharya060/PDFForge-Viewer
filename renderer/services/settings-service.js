@@ -12,7 +12,7 @@ export const DEFAULT_SETTINGS = {
   // Appearance & Reading
   theme: 'system', // 'system' | 'dark' | 'light'
   invertPdfColors: false, // Dark reader mode for PDF canvases
-  smoothScroll: true, // Smooth scrolling in document viewer
+  smoothScroll: false, // Smooth scrolling off by default for instant, crisp scrolling
 
   // Sidebar Defaults
   sidebarDefaultState: 'closed', // 'closed' | 'open'
@@ -24,8 +24,25 @@ export const DEFAULT_SETTINGS = {
   editorLineSpacing: 1.15, // 1.0, 1.15, 1.4, 1.6, 2.0
 
   // Session & History
-  restoreLastPage: true, // Remember last read page per document
+  restoreLastPage: false, // Default false: fresh open always starts at page 1; in-session tabs remember position while open
 };
+
+// Clean up legacy auto-scrolled last pages and reset old defaults if previously stored
+if (typeof localStorage !== 'undefined' && !localStorage.getItem('pdfforge-legacy-defaults-v121-cleared')) {
+  try {
+    localStorage.removeItem(LAST_PAGES_KEY);
+    const raw = localStorage.getItem(SETTINGS_KEY);
+    if (raw) {
+      const p = JSON.parse(raw);
+      if (p) {
+        if (p.restoreLastPage === true) p.restoreLastPage = false;
+        if (p.smoothScroll === true) p.smoothScroll = false;
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(p));
+      }
+    }
+  } catch {}
+  localStorage.setItem('pdfforge-legacy-defaults-v121-cleared', '1');
+}
 
 /**
  * Load user settings from localStorage merged with defaults
@@ -122,6 +139,8 @@ export function applyDomSettings(settings = getSettings()) {
  */
 export function getLastReadPage(docKey) {
   if (!docKey || typeof localStorage === 'undefined') return null;
+  const settings = getSettings();
+  if (!settings.restoreLastPage) return null;
   try {
     const raw = localStorage.getItem(LAST_PAGES_KEY);
     if (!raw) return null;
@@ -138,6 +157,8 @@ export function getLastReadPage(docKey) {
  */
 export function saveLastReadPage(docKey, pageNumber) {
   if (!docKey || !pageNumber || pageNumber < 1 || typeof localStorage === 'undefined') return;
+  const settings = getSettings();
+  if (!settings.restoreLastPage) return;
   try {
     const raw = localStorage.getItem(LAST_PAGES_KEY);
     const map = raw ? JSON.parse(raw) : {};
