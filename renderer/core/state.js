@@ -1,3 +1,5 @@
+import { getInitialZoomAndLayout } from '../services/settings-service.js';
+
 export const PAGE_PAD = 24;
 export const THUMB_MAX = 150;
 export const ZOOM_PRESETS = [0.25, 0.33, 0.5, 0.67, 0.75, 0.83, 1, 1.25, 1.5, 2, 2.5, 3, 4];
@@ -6,13 +8,15 @@ export const MAX_ZOOM = 4;
 export const RECENT_KEY = "pdfforge-recent-files";
 export const PDF_OPTIONS_KEY = "pdfforge-pdf-options";
 
+const initialConfig = getInitialZoomAndLayout();
+
 export const state = {
   doc: null,
   loadingTask: null,
   name: "",
   filePath: null,
-  layoutMode: "fit-width",
-  zoom: 1,
+  layoutMode: initialConfig.layoutMode,
+  zoom: initialConfig.zoom,
   rotation: 0,
   pages: [],
   outline: [],
@@ -23,14 +27,14 @@ export const state = {
   renderQueue: [],
   renderBusy: false,
   currentTheme: null,
-  activeSidebarTab: "thumbs",
+  activeSidebarTab: initialConfig.activeSidebarTab || "thumbs",
   search: {
     isOpen: false,
     query: "",
     matches: [],
     currentMatchIndex: -1,
   },
-  twoPageMode: false,
+  twoPageMode: Boolean(initialConfig.twoPageMode),
   data: null,
   editor: {
     active: false,

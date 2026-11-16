@@ -7,6 +7,7 @@ import { buildOutline, buildThumbnails, updateActiveThumb } from '../features/th
 import { renderTabBar, openMultipleFiles } from '../features/tabs/tabs.js';
 import { leaveEditor } from '../features/editor/editor.js';
 import { getDocument } from '../pdfjs/pdf.mjs';
+import { getSettings, getLastReadPage } from './settings-service.js';
 
 export async function destroyDocument() {
   toggleFindBar(false);
@@ -155,7 +156,16 @@ async function performOpen(data, name, filePath, currentTab) {
     state.loadingTask = task;
     state.doc = await task.promise;
     state.name = name;
-    state.currentPage = 1;
+
+    const settings = getSettings();
+    let initialPage = 1;
+    if (settings.restoreLastPage) {
+      const savedPage = getLastReadPage(filePath || name);
+      if (savedPage && savedPage >= 1 && savedPage <= state.doc.numPages) {
+        initialPage = savedPage;
+      }
+    }
+    state.currentPage = initialPage;
     document.title = `${name} — PDFForge Viewer`;
     el.docName.textContent = name;
     el.docName.title = filePath ? `${name} (${filePath})` : name;
@@ -171,6 +181,7 @@ async function performOpen(data, name, filePath, currentTab) {
       currentTab.loadingTask = state.loadingTask;
       currentTab.pages = state.pages;
       currentTab.outline = state.outline;
+      currentTab.currentPage = state.currentPage;
     }
     renderTabBar();
     layoutPages();
@@ -179,7 +190,13 @@ async function performOpen(data, name, filePath, currentTab) {
     syncFitButtons();
     updateControls();
     updateActiveThumb();
-    el.pageHost.scrollTo({ top: 0 });
+    if (initialPage > 1 && state.pages[initialPage - 1]?.div) {
+      setTimeout(() => {
+        state.pages[initialPage - 1].div.scrollIntoView();
+      }, 30);
+    } else {
+      el.pageHost.scrollTo({ top: 0 });
+    }
   } catch (err) {
     if (err && err.name === "PasswordException") {
       showPasswordModal("This PDF requires a password to open.");

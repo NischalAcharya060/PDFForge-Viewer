@@ -1,10 +1,12 @@
 import { state, PDF_OPTIONS_KEY } from '../core/state.js';
+import { getSettings } from './settings-service.js';
 
 export function defaultPdfOptions() {
+  const settings = getSettings();
   return {
-    pageSize: "a4",
-    fontSize: 11,
-    lineSpacing: 1.15,
+    pageSize: settings.editorPaperSize || "a4",
+    fontSize: Number(settings.editorFontSize) || 11,
+    lineSpacing: Number(settings.editorLineSpacing) || 1.15,
     margin: 56,
     pageNumbers: true,
     title: "",

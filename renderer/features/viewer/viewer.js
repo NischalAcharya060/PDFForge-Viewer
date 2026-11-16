@@ -8,6 +8,7 @@ import { showToast } from '../../components/toast.js';
 import { updateActiveThumb, updateThumbFromPageCanvas, thumbsVisible, applyThumbnails, queueThumbRenders, buildThumbnails, buildOutline } from '../thumbnails/thumbnails.js';
 import { setLoading, openDocument } from '../../services/document-service.js';
 import { renderTabBar } from '../tabs/tabs.js';
+import { saveLastReadPage } from '../../services/settings-service.js';
 
 export function availableSpace() {
   const w = el.pageHost.clientWidth - PAGE_PAD * 2;
@@ -197,6 +198,9 @@ export function computeCurrentPage() {
     }
     updateControls();
     updateActiveThumb();
+    if (state.filePath || state.name) {
+      saveLastReadPage(state.filePath || state.name, state.currentPage);
+    }
   }
 }
 

@@ -36,6 +36,7 @@ export const el = {
   btnFitPage: document.getElementById("btn-fit-page"),
   btnThumbs: document.getElementById("btn-thumbs"),
   btnTheme: document.getElementById("btn-theme"),
+  btnSettings: document.getElementById("btn-settings"),
   zoomSelect: document.getElementById("zoom-select"),
   docName: document.getElementById("doc-name"),
   pageJumpInput: document.getElementById("page-jump-input"),
@@ -183,6 +184,23 @@ export const el = {
   btnBrowseCustomIcon: document.getElementById("btn-browse-custom-icon"),
   customIconPathLabel: document.getElementById("custom-icon-path-label"),
   explorerPreviewIcon: document.getElementById("explorer-preview-icon"),
+  // Settings Form Controls
+  settingsTabsBar: document.getElementById("settings-tabs-bar"),
+  settingDefaultZoom: document.getElementById("setting-default-zoom"),
+  settingCustomZoomWrap: document.getElementById("setting-custom-zoom-wrap"),
+  settingCustomZoom: document.getElementById("setting-custom-zoom"),
+  settingDefaultLayout: document.getElementById("setting-default-layout"),
+  settingTheme: document.getElementById("setting-theme"),
+  settingInvertColors: document.getElementById("setting-invert-colors"),
+  settingSmoothScroll: document.getElementById("setting-smooth-scroll"),
+  settingSidebarState: document.getElementById("setting-sidebar-state"),
+  settingSidebarTab: document.getElementById("setting-sidebar-tab"),
+  settingRememberPage: document.getElementById("setting-remember-page"),
+  settingEditorPaper: document.getElementById("setting-editor-paper"),
+  settingEditorFontSize: document.getElementById("setting-editor-font-size"),
+  settingEditorLineSpacing: document.getElementById("setting-editor-line-spacing"),
+  btnSettingsReset: document.getElementById("btn-settings-reset"),
+  btnClearRecentSettings: document.getElementById("btn-clear-recent-settings"),
 };
 
 for (const preset of ZOOM_PRESETS) {

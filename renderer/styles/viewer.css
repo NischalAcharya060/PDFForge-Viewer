@@ -611,3 +611,18 @@ kbd {
   background: #ffffff;
   border-radius: 3px;
 }
+
+/* ==========================================================================
+   Night Reading (PDF Invert) & Smooth Scrolling
+   ========================================================================== */
+
+[data-pdf-invert="true"] #page-host .pdf-page,
+[data-pdf-invert="true"] #secondary-page-host .pdf-page {
+  filter: invert(0.9) hue-rotate(180deg);
+  background: #181b22;
+}
+
+[data-smooth-scroll="true"] #page-host,
+[data-smooth-scroll="true"] #secondary-page-host {
+  scroll-behavior: smooth;
+}

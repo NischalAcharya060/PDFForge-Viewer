@@ -994,6 +994,214 @@
   border: 1px solid rgba(229, 72, 77, 0.25);
 }
 
+.status-pill.info {
+  background: rgba(56, 139, 253, 0.12);
+  color: #58a6ff;
+  border: 1px solid rgba(56, 139, 253, 0.3);
+}
+
+/* Settings Tabs & Controls */
+.settings-tabs-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 0 12px 0;
+  border-bottom: 1px solid var(--border);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.settings-tabs-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.settings-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md, 7px);
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  user-select: none;
+}
+.settings-tab-btn:hover {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.06));
+  color: var(--text);
+}
+.settings-tab-btn.active {
+  background: var(--surface-active, rgba(229, 72, 77, 0.12));
+  color: var(--primary, #e5484d);
+  border-color: rgba(229, 72, 77, 0.28);
+  font-weight: 600;
+}
+.settings-tab-btn svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.settings-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.settings-tab-panel[hidden] {
+  display: none !important;
+}
+
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.06));
+}
+.setting-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.setting-info {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+}
+
+.setting-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.setting-help {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.setting-control-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.setting-select {
+  background: var(--input-bg, var(--surface, #1e222b));
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  padding: 6px 10px;
+  font-size: 12.5px;
+  outline: none;
+  min-width: 170px;
+  cursor: pointer;
+  transition: border-color 0.18s ease;
+}
+.setting-select:focus {
+  border-color: var(--primary, #e5484d);
+}
+
+.setting-input-with-unit {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.setting-number-input {
+  background: var(--input-bg, var(--surface, #1e222b));
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md, 6px);
+  padding: 6px 28px 6px 10px;
+  font-size: 12.5px;
+  width: 90px;
+  outline: none;
+  font-variant-numeric: tabular-nums;
+  transition: border-color 0.18s ease;
+}
+.setting-number-input:focus {
+  border-color: var(--primary, #e5484d);
+}
+
+.setting-unit {
+  position: absolute;
+  right: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Modern Switch Toggle */
+.setting-switch {
+  position: relative;
+  display: inline-block;
+  width: 38px;
+  height: 22px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.setting-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.setting-slider {
+  position: absolute;
+  cursor: pointer;
+  inset: 0;
+  background-color: var(--surface-active, rgba(255, 255, 255, 0.15));
+  border: 1px solid var(--border);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 22px;
+}
+.setting-slider:before {
+  position: absolute;
+  content: "";
+  height: 16px;
+  width: 16px;
+  left: 2px;
+  bottom: 2px;
+  background-color: #ffffff;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+.setting-switch input:checked + .setting-slider {
+  background-color: var(--primary, #e5484d);
+  border-color: var(--primary, #e5484d);
+}
+.setting-switch input:checked + .setting-slider:before {
+  transform: translateX(16px);
+}
+
+/* Danger Zone */
+.file-assoc-section.danger-zone {
+  border-color: rgba(229, 72, 77, 0.35);
+  background: rgba(229, 72, 77, 0.04);
+}
+.danger-btn {
+  background: transparent;
+  color: #e5484d;
+  border: 1px solid rgba(229, 72, 77, 0.4);
+  padding: 6px 14px;
+  font-size: 12.5px;
+  border-radius: var(--radius-md, 6px);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.danger-btn:hover {
+  background: rgba(229, 72, 77, 0.15);
+  border-color: #e5484d;
+}
+
 .default-app-btn-row {
   display: flex;
   align-items: center;

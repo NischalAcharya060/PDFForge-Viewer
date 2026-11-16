@@ -27,6 +27,7 @@ import { confirmUnsavedWork } from '../../components/unsaved-warning.js';
 import { savePdf } from '../editor/editor.js';
 import { escapeHtml, clamp } from '../../utils/helpers.js';
 import { getDocument } from '../../pdfjs/pdf.mjs';
+import { getInitialZoomAndLayout } from '../../services/settings-service.js';
 import {
   buildThumbnails,
   applyThumbnails,
@@ -414,6 +415,7 @@ export function createNewTab(opts = {}) {
   setTabCounter(tabCounter + 1);
   const id = 'tab-' + tabCounter;
   const rawBytes = opts.data ? (opts.data instanceof Uint8Array ? opts.data : new Uint8Array(opts.data)) : null;
+  const initial = getInitialZoomAndLayout();
   const newTab = {
     id,
     type: opts.type || 'empty',
@@ -424,12 +426,12 @@ export function createNewTab(opts = {}) {
     pages: [],
     outline: [],
     currentPage: 1,
-    zoom: 1,
-    layoutMode: 'fit-width',
-    twoPageMode: false,
+    zoom: opts.zoom !== undefined ? opts.zoom : initial.zoom,
+    layoutMode: opts.layoutMode || initial.layoutMode,
+    twoPageMode: opts.twoPageMode !== undefined ? opts.twoPageMode : initial.twoPageMode,
     rotation: 0,
-    sidebarVisible: Boolean(thumbsVisible),
-    activeSidebarTab: 'thumbs',
+    sidebarVisible: opts.sidebarVisible !== undefined ? opts.sidebarVisible : (thumbsVisible !== null && thumbsVisible !== undefined ? Boolean(thumbsVisible) : initial.sidebarVisible),
+    activeSidebarTab: opts.activeSidebarTab || initial.activeSidebarTab || 'thumbs',
     editor: opts.editor || null,
   };
   tabs.push(newTab);
@@ -602,6 +604,7 @@ export async function openSplitFile() {
   }
   setTabCounter(tabCounter + 1);
   const rawBytes = res.data ? (res.data instanceof Uint8Array ? res.data : new Uint8Array(res.data)) : null;
+  const initial = getInitialZoomAndLayout();
   const newTab = {
     id: "tab-" + tabCounter,
     type: "pdf",
@@ -612,9 +615,9 @@ export async function openSplitFile() {
     pages: [],
     outline: [],
     currentPage: 1,
-    zoom: 1,
-    layoutMode: "fit-width",
-    twoPageMode: false,
+    zoom: initial.zoom,
+    layoutMode: initial.layoutMode,
+    twoPageMode: initial.twoPageMode,
     rotation: 0,
     sidebarVisible: Boolean(thumbsVisible),
     activeSidebarTab: "thumbs",

@@ -1,6 +1,19 @@
 import { el } from "../core/elements.js";
 import { showToast } from "./toast.js";
 import { hideAllOverlays } from "../services/document-service.js";
+import {
+  getSettings,
+  saveSettings,
+  resetSettings,
+  getInitialZoomAndLayout,
+  applyDomSettings,
+  clearAllLastReadPages,
+} from "../services/settings-service.js";
+import { applyTheme } from "../utils/theme.js";
+import { state } from "../core/state.js";
+import { layoutPages, updateZoomSelect, syncFitButtons } from "../features/viewer/viewer.js";
+import { clearRecentFiles } from "../services/recent-files.js";
+import { clamp } from "../utils/helpers.js";
 
 let selectedIconId = "brand";
 let customIconPath = null;
@@ -183,9 +196,65 @@ export function selectIconCard(iconId) {
   }
 }
 
-export async function showFileAssocModal() {
+export function populateSettingsForm(settings = getSettings()) {
+  if (el.settingDefaultZoom) {
+    el.settingDefaultZoom.value = settings.defaultZoom || "125";
+  }
+  if (el.settingCustomZoom) {
+    el.settingCustomZoom.value = String(settings.customZoom || 125);
+  }
+  if (el.settingCustomZoomWrap) {
+    el.settingCustomZoomWrap.hidden = (settings.defaultZoom !== "custom");
+  }
+  if (el.settingDefaultLayout) {
+    el.settingDefaultLayout.value = settings.defaultLayout || "single";
+  }
+  if (el.settingTheme) {
+    el.settingTheme.value = settings.theme || "system";
+  }
+  if (el.settingInvertColors) {
+    el.settingInvertColors.checked = Boolean(settings.invertPdfColors);
+  }
+  if (el.settingSmoothScroll) {
+    el.settingSmoothScroll.checked = settings.smoothScroll !== false;
+  }
+  if (el.settingSidebarState) {
+    el.settingSidebarState.value = settings.sidebarDefaultState || "closed";
+  }
+  if (el.settingSidebarTab) {
+    el.settingSidebarTab.value = settings.defaultSidebarTab || "thumbs";
+  }
+  if (el.settingRememberPage) {
+    el.settingRememberPage.checked = settings.restoreLastPage !== false;
+  }
+  if (el.settingEditorPaper) {
+    el.settingEditorPaper.value = settings.editorPaperSize || "a4";
+  }
+  if (el.settingEditorFontSize) {
+    el.settingEditorFontSize.value = String(settings.editorFontSize || 11);
+  }
+  if (el.settingEditorLineSpacing) {
+    el.settingEditorLineSpacing.value = String(settings.editorLineSpacing || 1.15);
+  }
+}
+
+export function switchSettingsTab(tabName = "viewer") {
+  const tabs = ["viewer", "system", "editor", "session"];
+  tabs.forEach((t) => {
+    const btn = document.querySelector(`.settings-tab-btn[data-tab="${t}"]`);
+    const panel = document.getElementById(`tab-panel-${t}`);
+    if (btn) btn.classList.toggle("active", t === tabName);
+    if (panel) panel.hidden = (t !== tabName);
+  });
+}
+
+export async function showFileAssocModal(initialTab = "viewer") {
   hideAllOverlays();
   if (el.fileAssocModal) el.fileAssocModal.hidden = false;
+
+  // Populate settings form and activate initial tab
+  populateSettingsForm();
+  switchSettingsTab(initialTab);
 
   // Load preferences
   const prefs = await getFileAssocPrefs();
@@ -202,6 +271,8 @@ export async function showFileAssocModal() {
   selectIconCard(selectedIconId);
   await updateDefaultAppStatus();
 }
+
+export const showSettingsModal = showFileAssocModal;
 
 export function hideFileAssocModal() {
   if (el.fileAssocModal) el.fileAssocModal.hidden = true;
@@ -258,11 +329,11 @@ export async function handleBrowseCustomIcon() {
 }
 
 export async function handleApplyFileIcon() {
-  if (!window.pdfViewer?.applyPdfFileIcon) return;
+  if (!window.pdfViewer?.applyPdfFileIcon) return { success: true };
 
   if (selectedIconId === "custom" && !customIconPath) {
     showToast("Please browse and select an icon file first.", "warning");
-    return;
+    return { success: false };
   }
 
   if (el.btnApplyIcon) {
@@ -277,19 +348,71 @@ export async function handleApplyFileIcon() {
     });
 
     if (res?.success) {
-      showToast(res.message || "PDF file icon updated in Windows Explorer!", "success");
-      hideFileAssocModal();
+      // Icon successfully saved
     } else {
-      showToast(res?.error || res?.message || "Failed to update file icon.", "error");
+      console.warn("File icon apply warning:", res);
     }
+    return res;
   } catch (err) {
-    showToast("Error updating file icon: " + (err?.message || err), "error");
+    console.warn("Error updating file icon:", err);
+    return { success: false, error: err?.message || err };
   } finally {
     if (el.btnApplyIcon) {
       el.btnApplyIcon.disabled = false;
       el.btnApplyIcon.textContent = "Apply & Save";
     }
   }
+}
+
+export async function handleApplyAllPreferences() {
+  // 1. Gather and save settings
+  const customZoomNum = el.settingCustomZoom ? Number(el.settingCustomZoom.value) || 125 : 125;
+  const newSettings = {
+    defaultZoom: el.settingDefaultZoom ? el.settingDefaultZoom.value : "125",
+    customZoom: clamp(customZoomNum, 25, 500),
+    defaultLayout: el.settingDefaultLayout ? el.settingDefaultLayout.value : "single",
+    theme: el.settingTheme ? el.settingTheme.value : "system",
+    invertPdfColors: el.settingInvertColors ? Boolean(el.settingInvertColors.checked) : false,
+    smoothScroll: el.settingSmoothScroll ? Boolean(el.settingSmoothScroll.checked) : true,
+    sidebarDefaultState: el.settingSidebarState ? el.settingSidebarState.value : "closed",
+    defaultSidebarTab: el.settingSidebarTab ? el.settingSidebarTab.value : "thumbs",
+    restoreLastPage: el.settingRememberPage ? Boolean(el.settingRememberPage.checked) : true,
+    editorPaperSize: el.settingEditorPaper ? el.settingEditorPaper.value : "a4",
+    editorFontSize: el.settingEditorFontSize ? Number(el.settingEditorFontSize.value) || 11 : 11,
+    editorLineSpacing: el.settingEditorLineSpacing ? Number(el.settingEditorLineSpacing.value) || 1.15 : 1.15,
+  };
+
+  saveSettings(newSettings);
+
+  // Apply theme if requested
+  if (newSettings.theme === "dark") {
+    applyTheme("dark", true);
+  } else if (newSettings.theme === "light") {
+    applyTheme("light", true);
+  } else if (window.pdfViewer?.getTheme) {
+    const sysTheme = await window.pdfViewer.getTheme();
+    applyTheme(sysTheme === "dark" ? "dark" : "light", false);
+  }
+
+  // Apply DOM settings (invert, smooth scroll)
+  applyDomSettings(newSettings);
+
+  // If a document is currently active, apply the zoom/layout settings right away
+  if (state.doc) {
+    const initialConfig = getInitialZoomAndLayout();
+    state.zoom = initialConfig.zoom;
+    state.layoutMode = initialConfig.layoutMode;
+    state.twoPageMode = initialConfig.twoPageMode;
+    layoutPages();
+    updateZoomSelect();
+    syncFitButtons();
+  }
+
+  // 2. Also apply file association & icon changes
+  await handleApplyFileIcon();
+
+  showToast("Preferences and settings saved successfully!", "success");
+  hideFileAssocModal();
 }
 
 export function initFileAssocModal() {
@@ -309,7 +432,51 @@ export function initFileAssocModal() {
     el.btnBrowseCustomIcon.addEventListener("click", handleBrowseCustomIcon);
   }
   if (el.btnApplyIcon) {
-    el.btnApplyIcon.addEventListener("click", handleApplyFileIcon);
+    el.btnApplyIcon.addEventListener("click", handleApplyAllPreferences);
+  }
+
+  // Settings Tabs switching
+  if (el.settingsTabsBar) {
+    el.settingsTabsBar.addEventListener("click", (e) => {
+      const btn = e.target.closest(".settings-tab-btn");
+      if (btn && btn.dataset.tab) {
+        switchSettingsTab(btn.dataset.tab);
+      }
+    });
+  }
+
+  // Handle custom zoom toggle
+  if (el.settingDefaultZoom) {
+    el.settingDefaultZoom.addEventListener("change", () => {
+      if (el.settingCustomZoomWrap) {
+        el.settingCustomZoomWrap.hidden = (el.settingDefaultZoom.value !== "custom");
+      }
+    });
+  }
+
+  // Reset settings button
+  if (el.btnSettingsReset) {
+    el.btnSettingsReset.addEventListener("click", () => {
+      const defaults = resetSettings();
+      populateSettingsForm(defaults);
+      showToast("Settings reset to defaults (125% zoom)", "info");
+    });
+  }
+
+  // Clear recent files button in settings
+  if (el.btnClearRecentSettings) {
+    el.btnClearRecentSettings.addEventListener("click", () => {
+      clearRecentFiles();
+      clearAllLastReadPages();
+      showToast("Recent documents & reading progress cleared", "info");
+    });
+  }
+
+  // Toolbar settings button
+  if (el.btnSettings) {
+    el.btnSettings.addEventListener("click", () => {
+      showFileAssocModal("viewer");
+    });
   }
 
   // Handle clicking icon cards

@@ -25,6 +25,7 @@ import { initFileAssocModal, showFileAssocModal } from '../components/file-assoc
 import { openDocument, destroyDocument, openFromDialog, hideAllOverlays, showEmpty, showError } from '../services/document-service.js';
 import { clearRecentFiles, renderRecentFiles } from '../services/recent-files.js';
 import { persistPdfOptions } from '../services/pdf-options.js';
+import { getSettings, applyDomSettings } from '../services/settings-service.js';
 
 // Features — Tabs
 import { createNewTab, closeTab, cycleTabs, openMultipleFiles, toggleTwoPage, toggleSplitView, closeSplitView, setupSplitDivider, renderTabBar, snapshotCurrentTab, restoreTab, showTabContextMenu, hideTabContextMenu, closeOtherTabs, closeTabsToRight, duplicateTab, openTabInSplit, openSplitFile, onSplitDocSelectChange } from '../features/tabs/tabs.js';
@@ -755,8 +756,17 @@ function bindEvents() {
 }
 
 async function init() {
+  const settings = getSettings();
+  applyDomSettings(settings);
   const saved = localStorage.getItem("viewer-theme");
-  const initial = saved || (await window.pdfViewer.getTheme());
+  let initial = saved;
+  if (!initial) {
+    if (settings.theme === "dark" || settings.theme === "light") {
+      initial = settings.theme;
+    } else {
+      initial = await window.pdfViewer.getTheme();
+    }
+  }
   applyTheme(initial === "dark" ? "dark" : "light");
   initQuill();
   bindEvents();

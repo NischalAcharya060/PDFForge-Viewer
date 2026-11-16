@@ -235,6 +235,70 @@ async function runAppSmoke({ app, mainWindow }) {
     console.log("[smoke] file-assoc modal closed ok:", Boolean(closedOk));
     if (!closedOk) throw new Error("File association modal did not close");
 
+    // Settings & Preferences Smoke Verification
+    console.log("[smoke] Verifying Settings & Preferences features...");
+    // Open settings from the toolbar button
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-settings').click();");
+    const settingsOpened = await poll(
+      () => mainWindow.webContents.executeJavaScript("!document.getElementById('file-assoc-modal').hidden"),
+      3000
+    );
+    console.log("[smoke] settings modal opened from toolbar:", Boolean(settingsOpened));
+    if (!settingsOpened) throw new Error("Settings modal did not open from toolbar button");
+
+    // Verify default zoom is 125
+    const initialDefaultZoom = await mainWindow.webContents.executeJavaScript(
+      "document.getElementById('setting-default-zoom').value"
+    );
+    console.log("[smoke] default zoom value in settings:", initialDefaultZoom);
+    if (initialDefaultZoom !== "125") throw new Error("Expected initial default zoom to be '125', got " + initialDefaultZoom);
+
+    // Switch between settings tabs
+    await mainWindow.webContents.executeJavaScript("document.querySelector('.settings-tab-btn[data-tab=\"editor\"]').click();");
+    const editorPanelVisible = await mainWindow.webContents.executeJavaScript(
+      "!document.getElementById('tab-panel-editor').hidden && document.getElementById('tab-panel-viewer').hidden"
+    );
+    console.log("[smoke] settings editor tab switched:", Boolean(editorPanelVisible));
+    if (!editorPanelVisible) throw new Error("Settings tab switching failed");
+
+    // Switch to session tab and test reset
+    await mainWindow.webContents.executeJavaScript("document.querySelector('.settings-tab-btn[data-tab=\"session\"]').click();");
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-settings-reset').click();");
+
+    // Switch back to viewer tab, update preference to 150%, and save
+    await mainWindow.webContents.executeJavaScript("document.querySelector('.settings-tab-btn[data-tab=\"viewer\"]').click();");
+    await mainWindow.webContents.executeJavaScript("document.getElementById('setting-default-zoom').value = '150';");
+    await mainWindow.webContents.executeJavaScript("document.getElementById('setting-invert-colors').checked = true;");
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-apply-icon').click();");
+
+    const settingsClosedAfterSave = await poll(
+      () => mainWindow.webContents.executeJavaScript("document.getElementById('file-assoc-modal').hidden"),
+      3000
+    );
+    console.log("[smoke] settings saved and modal closed:", Boolean(settingsClosedAfterSave));
+    if (!settingsClosedAfterSave) throw new Error("Settings modal did not close after save");
+
+    // Verify localStorage has saved preferences
+    const savedPrefs = await mainWindow.webContents.executeJavaScript(
+      "JSON.parse(localStorage.getItem('pdfforge-user-settings') || '{}')"
+    );
+    console.log("[smoke] saved preferences in localStorage:", JSON.stringify(savedPrefs));
+    if (savedPrefs.defaultZoom !== "150" || !savedPrefs.invertPdfColors) {
+      throw new Error("Settings failed to persist in localStorage: " + JSON.stringify(savedPrefs));
+    }
+
+    // Verify DOM dataset updated for invert colors
+    const invertActive = await mainWindow.webContents.executeJavaScript(
+      "document.documentElement.dataset.pdfInvert === 'true'"
+    );
+    console.log("[smoke] DOM pdfInvert applied:", Boolean(invertActive));
+    if (!invertActive) throw new Error("DOM dataset.pdfInvert was not applied");
+
+    // Reset settings back to default 125% so clean state is maintained
+    await mainWindow.webContents.executeJavaScript(
+      "localStorage.removeItem('pdfforge-user-settings'); document.documentElement.dataset.pdfInvert = 'false';"
+    );
+
     // Multi-Tab & Split View Smoke Verification
     console.log("[smoke] Verifying multi-tab switching and thumbnail preservation...");
     // Currently on Tab 1 (PDF)
