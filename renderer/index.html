@@ -63,6 +63,11 @@
             <path d="M3 9h18" />
           </svg>
         </button>
+        <button id="btn-open-folder" class="icon-btn" title="Open Folder (All PDFs) (Ctrl+Shift+O)">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+          </svg>
+        </button>
         <button id="btn-print" class="icon-btn" title="Print (Ctrl+P)" disabled>
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M6 9V3h12v6" />
@@ -258,13 +263,19 @@
                 </svg>
                 Browse &amp; Open PDF…
               </button>
+              <button id="btn-open-folder-empty" class="plain-btn empty-btn-full" type="button" style="margin-top: 8px;">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2" />
+                </svg>
+                Open Folder (All PDFs)…
+              </button>
               <div class="empty-drop-zone-cue">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                   <polyline points="17 8 12 3 7 8"/>
                   <line x1="12" y1="3" x2="12" y2="15"/>
                 </svg>
-                <span>or drop a PDF anywhere in this window</span>
+                <span>or drop PDFs or a folder anywhere in this window</span>
               </div>
             </div>
 
@@ -309,6 +320,7 @@
           <span class="shortcuts-bar-title">Quick Shortcuts:</span>
           <div class="empty-shortcuts">
             <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>O</kbd> Open</span>
+            <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>O</kbd> Open Folder</span>
             <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>N</kbd> New Document</span>
             <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>T</kbd> New Tab</span>
             <span class="shortcut-chip"><kbd>Ctrl</kbd>+<kbd>Alt</kbd>+<kbd>S</kbd> Split View</span>
@@ -663,6 +675,7 @@
           <div class="shortcut-row"><span class="shortcut-desc">New Document</span><span><kbd>Ctrl</kbd> + <kbd>N</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Save Document as PDF</span><span><kbd>Ctrl</kbd> + <kbd>S</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Open PDF</span><span><kbd>Ctrl</kbd> + <kbd>O</kbd></span></div>
+          <div class="shortcut-row"><span class="shortcut-desc">Open Folder (All PDFs)</span><span><kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>O</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Find in Document</span><span><kbd>Ctrl</kbd> + <kbd>F</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Print Document</span><span><kbd>Ctrl</kbd> + <kbd>P</kbd></span></div>
           <div class="shortcut-row"><span class="shortcut-desc">Rotate Clockwise</span><span><kbd>Ctrl</kbd> + <kbd>R</kbd></span></div>

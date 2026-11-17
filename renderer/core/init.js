@@ -22,7 +22,7 @@ import { hasAnyUnsavedWork, showUnsavedWarningModal, hideUnsavedWarningModal, se
 import { initFileAssocModal, showFileAssocModal } from '../components/file-assoc-modal.js';
 
 // Services
-import { openDocument, destroyDocument, openFromDialog, hideAllOverlays, showEmpty, showError } from '../services/document-service.js';
+import { openDocument, destroyDocument, openFromDialog, openFolderFromDialog, hideAllOverlays, showEmpty, showError } from '../services/document-service.js';
 import { clearRecentFiles, renderRecentFiles } from '../services/recent-files.js';
 import { persistPdfOptions } from '../services/pdf-options.js';
 import { getSettings, applyDomSettings } from '../services/settings-service.js';
@@ -138,7 +138,9 @@ function bindEvents() {
 
   if (el.btnNew) el.btnNew.addEventListener("click", newTextFile);
   el.btnOpen.addEventListener("click", openFromDialog);
+  if (el.btnOpenFolder) el.btnOpenFolder.addEventListener("click", openFolderFromDialog);
   el.btnOpenEmpty.addEventListener("click", openFromDialog);
+  if (el.btnOpenFolderEmpty) el.btnOpenFolderEmpty.addEventListener("click", openFolderFromDialog);
   if (el.btnNewEmpty) el.btnNewEmpty.addEventListener("click", newTextFile);
   el.btnErrorOpen.addEventListener("click", openFromDialog);
   el.btnErrorDismiss.addEventListener("click", showEmpty);
@@ -459,17 +461,41 @@ function bindEvents() {
     e.preventDefault();
     dragDepth = 0;
     el.dropOverlay.hidden = true;
-    const dropped = Array.from(e.dataTransfer?.files || []).filter((f) => /\.pdf$/i.test(f.name));
-    if (!dropped.length) {
+    const dropped = Array.from(e.dataTransfer?.files || []);
+    if (!dropped.length) return;
+
+    let folderHandled = false;
+    for (const file of dropped) {
+      const filePath = window.pdfViewer.getPathForFile ? window.pdfViewer.getPathForFile(file) : null;
+      if (filePath && window.pdfViewer?.checkPathType) {
+        const typeInfo = await window.pdfViewer.checkPathType(filePath);
+        if (typeInfo.isDirectory) {
+          folderHandled = true;
+          const res = await window.pdfViewer.openFolderPath(filePath);
+          if (res && !res.canceled) {
+            if (res.files && res.files.length > 0) {
+              await openMultipleFiles(res.files);
+              showToast(`Opened ${res.files.length} document${res.files.length === 1 ? '' : 's'} from "${res.folderName}"`, "success");
+            } else {
+              showToast(`No PDF files found in "${res.folderName}".`, "info");
+            }
+          }
+        }
+      }
+    }
+    if (folderHandled) return;
+
+    const droppedPdfs = dropped.filter((f) => /\.pdf$/i.test(f.name));
+    if (!droppedPdfs.length) {
       if (state.doc || state.editor.active) {
-        showToast("Only PDF files can be opened", "error");
+        showToast("Only PDF files or folders containing PDFs can be opened", "error");
       } else {
-        showError(new Error("Only PDF files can be opened."));
+        showError(new Error("Only PDF files or folders containing PDFs can be opened."));
       }
       return;
     }
     const filesToOpen = [];
-    for (const file of dropped) {
+    for (const file of droppedPdfs) {
       const path = window.pdfViewer.getPathForFile ? window.pdfViewer.getPathForFile(file) : null;
       const buffer = new Uint8Array(await file.arrayBuffer());
       filesToOpen.push({ name: file.name, path, data: buffer });
@@ -528,7 +554,11 @@ function bindEvents() {
       }
       if (k === "o") {
         e.preventDefault();
-        openFromDialog();
+        if (e.shiftKey) {
+          openFolderFromDialog();
+        } else {
+          openFromDialog();
+        }
         return;
       }
       if (k === "p") {
@@ -702,6 +732,9 @@ function bindEvents() {
         break;
       case "open":
         openFromDialog();
+        break;
+      case "open-folder":
+        openFolderFromDialog();
         break;
       case "find":
         toggleFindBar(true);

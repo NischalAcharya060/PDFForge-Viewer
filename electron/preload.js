@@ -10,6 +10,9 @@ function subscribe(channel) {
 
 contextBridge.exposeInMainWorld("pdfViewer", {
   openDialog: () => ipcRenderer.invoke("dialog:open-pdf"),
+  openFolderDialog: () => ipcRenderer.invoke("dialog:open-folder"),
+  openFolderPath: (folderPath) => ipcRenderer.invoke("folder:open-path", folderPath),
+  checkPathType: (targetPath) => ipcRenderer.invoke("file:check-type", targetPath),
   readFile: (filePath) => ipcRenderer.invoke("file:read", filePath),
   createTextPdf: (payload) => ipcRenderer.invoke("dialog:create-text-pdf", payload),
   savePdf: (payload) => ipcRenderer.invoke("dialog:save-pdf", payload),

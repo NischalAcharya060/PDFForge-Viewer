@@ -155,6 +155,7 @@ function buildMenu() {
         { type: "separator" },
         { label: "New Document…", accelerator: "CmdOrCtrl+N", click: () => send("new-text-file") },
         { label: "Open PDF…", accelerator: "CmdOrCtrl+O", click: () => send("open") },
+        { label: "Open Folder…", accelerator: "CmdOrCtrl+Shift+O", click: () => send("open-folder") },
         { label: "Save Document as PDF…", accelerator: "CmdOrCtrl+S", click: () => send("save-pdf") },
         { type: "separator" },
         { label: "Print…", accelerator: "CmdOrCtrl+P", click: () => send("print") },
@@ -244,6 +245,68 @@ if (!gotLock) {
     nativeTheme.themeSource = "system";
     registerProtocol();
 
+    const FOLDER_OPEN_THRESHOLD = 15;
+
+    async function readPdfFolder(folderPath) {
+      try {
+        const stat = await fs.stat(folderPath);
+        if (!stat.isDirectory()) {
+          return { canceled: true, error: "Selected path is not a directory." };
+        }
+        const entries = await fs.readdir(folderPath, { withFileTypes: true });
+        // Filter top-level files ending with .pdf (ignore subdirectories)
+        const pdfEntries = entries
+          .filter((entry) => entry.isFile() && /\.pdf$/i.test(entry.name))
+          .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+
+        const folderName = path.basename(folderPath);
+
+        if (pdfEntries.length === 0) {
+          return { canceled: false, files: [], folderName, count: 0 };
+        }
+
+        if (pdfEntries.length > FOLDER_OPEN_THRESHOLD) {
+          const targetWin = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+          const { response } = await dialog.showMessageBox(targetWin, {
+            type: "question",
+            buttons: [`Open All (${pdfEntries.length})`, "Cancel"],
+            defaultId: 0,
+            cancelId: 1,
+            title: "Open Multiple Documents",
+            message: `Open ${pdfEntries.length} PDF documents from "${folderName}"?`,
+            detail: `Opening ${pdfEntries.length} tabs simultaneously may take a few moments and increase memory usage.`,
+          });
+          if (response !== 0) {
+            return { canceled: true };
+          }
+        }
+
+        const files = [];
+        for (const entry of pdfEntries) {
+          const filePath = path.join(folderPath, entry.name);
+          const data = await fs.readFile(filePath);
+          files.push({
+            name: entry.name,
+            path: filePath,
+            data: new Uint8Array(data),
+          });
+        }
+
+        return {
+          canceled: false,
+          files,
+          folderName,
+          count: files.length,
+        };
+      } catch (err) {
+        return {
+          canceled: false,
+          error: err && err.message ? err.message : String(err),
+          files: [],
+        };
+      }
+    }
+
     ipcMain.handle("dialog:open-pdf", async () => {
       const result = await dialog.showOpenDialog(mainWindow, {
         title: "Open PDF",
@@ -263,6 +326,32 @@ if (!gotLock) {
         path: files[0].path,
         data: files[0].data,
       };
+    });
+
+    ipcMain.handle("dialog:open-folder", async () => {
+      const result = await dialog.showOpenDialog(mainWindow, {
+        title: "Open Folder",
+        properties: ["openDirectory"],
+      });
+      if (result.canceled || !result.filePaths.length) return { canceled: true };
+      const folderPath = result.filePaths[0];
+      return await readPdfFolder(folderPath);
+    });
+
+    ipcMain.handle("folder:open-path", async (_event, folderPath) => {
+      if (typeof folderPath !== "string" || !path.isAbsolute(folderPath)) {
+        throw new Error("Invalid path");
+      }
+      return await readPdfFolder(folderPath);
+    });
+
+    ipcMain.handle("file:check-type", async (_event, targetPath) => {
+      try {
+        const stat = await fs.stat(targetPath);
+        return { isDirectory: stat.isDirectory(), isFile: stat.isFile() };
+      } catch {
+        return { isDirectory: false, isFile: false };
+      }
     });
 
     ipcMain.handle("pdf:add-blank-page", async (_event, pdfData) => {

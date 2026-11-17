@@ -530,15 +530,22 @@ export function cycleTabs(offset) {
 
 export async function openMultipleFiles(files) {
   if (!files || !files.length) return;
+  let firstTab = null;
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
     const currentTab = tabs.find((t) => t.id === activeTabId);
     if (i === 0 && currentTab && currentTab.type === "empty") {
+      firstTab = currentTab;
       await openDocument(f.data, f.name, f.path);
     } else {
-      createNewTab({ type: "pdf", name: f.name, filePath: f.path });
+      const newTab = createNewTab({ type: "pdf", name: f.name, filePath: f.path });
+      if (i === 0) firstTab = newTab;
       await openDocument(f.data, f.name, f.path);
     }
+  }
+  if (firstTab && activeTabId !== firstTab.id) {
+    snapshotCurrentTab();
+    restoreTab(firstTab);
   }
 }
 

@@ -8,6 +8,7 @@ import { renderTabBar, openMultipleFiles } from '../features/tabs/tabs.js';
 import { leaveEditor } from '../features/editor/editor.js';
 import { getDocument } from '../pdfjs/pdf.mjs';
 import { getSettings, getLastReadPage } from './settings-service.js';
+import { showToast } from '../components/toast.js';
 
 export async function destroyDocument() {
   toggleFindBar(false);
@@ -213,4 +214,20 @@ export async function openFromDialog() {
   if (!res || res.canceled) return;
   const files = res.files && res.files.length ? res.files : [{ name: res.name, path: res.path, data: res.data }];
   openMultipleFiles(files);
+}
+
+export async function openFolderFromDialog() {
+  if (!window.pdfViewer?.openFolderDialog) return;
+  const res = await window.pdfViewer.openFolderDialog();
+  if (!res || res.canceled) return;
+  if (res.error) {
+    showToast(`Failed to open folder: ${res.error}`, "error");
+    return;
+  }
+  if (!res.files || res.files.length === 0) {
+    showToast(`No PDF files found in "${res.folderName || 'the selected folder'}".`, "info");
+    return;
+  }
+  await openMultipleFiles(res.files);
+  showToast(`Opened ${res.files.length} document${res.files.length === 1 ? '' : 's'} from "${res.folderName}"`, "success");
 }
