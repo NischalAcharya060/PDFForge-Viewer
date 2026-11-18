@@ -803,7 +803,23 @@ async function init() {
   bindEvents();
   bindImageModalEvents();
   setupBeforeUnload();
-  createNewTab();
+
+  // Check if initial target (file or folder) was requested via CLI or Windows Explorer
+  try {
+    if (window.pdfViewer?.getLaunchTarget) {
+      const launch = await window.pdfViewer.getLaunchTarget();
+      if (launch && launch.files && launch.files.length) {
+        await openMultipleFiles(launch.files);
+      }
+    }
+  } catch (err) {
+    console.warn("Could not load initial launch target:", err);
+  }
+
+  if (!tabs || tabs.length === 0) {
+    createNewTab();
+  }
+
   window.__pdfViewerReady = true;
   window.__state = state;
   document.body.dataset.ready = "1";

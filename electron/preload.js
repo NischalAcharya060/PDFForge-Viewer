@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld("pdfViewer", {
   setTheme: (theme) => ipcRenderer.invoke("app:set-theme", theme),
   getTheme: () => ipcRenderer.invoke("app:get-theme"),
   getAppInfo: () => ipcRenderer.invoke("app:get-info"),
+  getLaunchTarget: () => ipcRenderer.invoke("app:get-launch-target"),
   onOpenFile: subscribe("open-file"),
   onCommand: subscribe("menu:command"),
   // Close confirmation flow
@@ -40,4 +41,7 @@ contextBridge.exposeInMainWorld("pdfViewer", {
   getIconPreferences: () => ipcRenderer.invoke("fileAssoc:getIconPrefs"),
   applyPdfFileIcon: (payload) => ipcRenderer.invoke("fileAssoc:applyIcon", payload),
   chooseCustomIcon: () => ipcRenderer.invoke("fileAssoc:chooseCustomIcon"),
+  // Windows Explorer Context Menu Integration
+  getContextMenuStatus: () => ipcRenderer.invoke("fileAssoc:getContextMenuStatus"),
+  setContextMenuStatus: (enabled) => ipcRenderer.invoke("fileAssoc:setContextMenuStatus", enabled),
 });

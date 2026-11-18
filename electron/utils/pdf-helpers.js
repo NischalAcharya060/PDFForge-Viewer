@@ -19,6 +19,39 @@ async function firstPdfArg(argv) {
   return null;
 }
 
+function isExcludedArg(raw) {
+  if (!raw || typeof raw !== "string") return true;
+  if (raw.startsWith("-")) return true;
+  if (raw === "." || raw === ".." || raw === "./" || raw === ".\\") return true;
+  if (/\.(js|mjs|cjs|json|ts)$/i.test(raw)) return true;
+  return false;
+}
+
+async function resolveLaunchTarget(argv) {
+  if (!Array.isArray(argv)) return null;
+  for (const raw of argv.slice(1)) {
+    if (isExcludedArg(raw)) continue;
+    try {
+      const cleaned = raw.replace(/^"+|"+$/g, "").trim();
+      if (!cleaned) continue;
+      const resolved = path.resolve(cleaned);
+      const appRoot = path.resolve(__dirname, "..", "..");
+      if (resolved === appRoot) continue;
+
+      const st = await fs.stat(resolved);
+      if (st.isDirectory()) {
+        return { type: "directory", path: resolved };
+      }
+      if (st.isFile() && /\.pdf$/i.test(resolved)) {
+        return { type: "file", path: resolved };
+      }
+    } catch {
+      // skip
+    }
+  }
+  return null;
+}
+
 function makeTestPdf() {
   const objects = {
     "1": "<< /Type /Catalog /Pages 2 0 R >>",
@@ -45,4 +78,4 @@ function makeTestPdf() {
   return Buffer.concat([body, Buffer.from(xref + trailer)]);
 }
 
-module.exports = { looksLikePdf, firstPdfArg, makeTestPdf };
+module.exports = { looksLikePdf, firstPdfArg, resolveLaunchTarget, makeTestPdf };

@@ -4,14 +4,14 @@ const fs = require("node:fs/promises");
 const { pathToFileURL } = require("node:url");
 const { textToPdf } = require("./services/text-to-pdf");
 const { richToPdf } = require("./services/rich-to-pdf");
-const { looksLikePdf, firstPdfArg } = require('./utils/pdf-helpers');
+const { looksLikePdf, firstPdfArg, resolveLaunchTarget } = require('./utils/pdf-helpers');
 const { PDFDocument } = require("pdf-lib");
 const fileAssoc = require("./services/file-association");
 
 const SMOKE = process.argv.includes("--smoke") || process.env.PDFVIEWER_SMOKE === "1";
 
 let mainWindow = null;
-let pendingFile = null;
+let pendingTarget = null;
 let lastThemeSource = "system";
 
 function themeBackgroundColor() {
@@ -95,6 +95,81 @@ function sendReadyFile(filePath) {
       });
     })
     .catch(() => {});
+}
+
+const FOLDER_OPEN_THRESHOLD = 15;
+
+async function readPdfFolder(folderPath) {
+  try {
+    const stat = await fs.stat(folderPath);
+    if (!stat.isDirectory()) {
+      return { canceled: true, error: "Selected path is not a directory." };
+    }
+    const entries = await fs.readdir(folderPath, { withFileTypes: true });
+    // Filter top-level files ending with .pdf (ignore subdirectories)
+    const pdfEntries = entries
+      .filter((entry) => entry.isFile() && /\.pdf$/i.test(entry.name))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
+
+    const folderName = path.basename(folderPath);
+
+    if (pdfEntries.length === 0) {
+      return { canceled: false, files: [], folderName, count: 0 };
+    }
+
+    if (pdfEntries.length > FOLDER_OPEN_THRESHOLD) {
+      const targetWin = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
+      const { response } = await dialog.showMessageBox(targetWin, {
+        type: "question",
+        buttons: [`Open All (${pdfEntries.length})`, "Cancel"],
+        defaultId: 0,
+        cancelId: 1,
+        title: "Open Multiple Documents",
+        message: `Open ${pdfEntries.length} PDF documents from "${folderName}"?`,
+        detail: `Opening ${pdfEntries.length} tabs simultaneously may take a few moments and increase memory usage.`,
+      });
+      if (response !== 0) {
+        return { canceled: true };
+      }
+    }
+
+    const files = [];
+    for (const entry of pdfEntries) {
+      const filePath = path.join(folderPath, entry.name);
+      const data = await fs.readFile(filePath);
+      files.push({
+        name: entry.name,
+        path: filePath,
+        data: new Uint8Array(data),
+      });
+    }
+
+    return {
+      canceled: false,
+      files,
+      folderName,
+      count: files.length,
+    };
+  } catch (err) {
+    return {
+      canceled: false,
+      error: err && err.message ? err.message : String(err),
+      files: [],
+    };
+  }
+}
+
+async function sendReadyTarget(target) {
+  if (!target || !target.path) return;
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  if (target.type === "file") {
+    sendReadyFile(target.path);
+  } else if (target.type === "directory") {
+    const res = await readPdfFolder(target.path);
+    if (!res || res.canceled || !res.files || !res.files.length) return;
+    mainWindow.webContents.send("open-file", res.files);
+  }
 }
 
 function createWindow() {
@@ -228,84 +303,24 @@ const gotLock = app.requestSingleInstanceLock();
 if (!gotLock) {
   app.quit();
 } else {
-  app.on("second-instance", (_event, argv) => {
+  app.on("second-instance", async (_event, argv) => {
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
       mainWindow.focus();
     }
-    firstPdfArg(argv).then((p) => {
-      if (p) {
-        if (mainWindow) sendReadyFile(p);
-        else pendingFile = p;
+    const target = await resolveLaunchTarget(argv);
+    if (target) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        sendReadyTarget(target);
+      } else {
+        pendingTarget = target;
       }
-    });
+    }
   });
 
   app.whenReady().then(async () => {
     nativeTheme.themeSource = "system";
     registerProtocol();
-
-    const FOLDER_OPEN_THRESHOLD = 15;
-
-    async function readPdfFolder(folderPath) {
-      try {
-        const stat = await fs.stat(folderPath);
-        if (!stat.isDirectory()) {
-          return { canceled: true, error: "Selected path is not a directory." };
-        }
-        const entries = await fs.readdir(folderPath, { withFileTypes: true });
-        // Filter top-level files ending with .pdf (ignore subdirectories)
-        const pdfEntries = entries
-          .filter((entry) => entry.isFile() && /\.pdf$/i.test(entry.name))
-          .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: "base" }));
-
-        const folderName = path.basename(folderPath);
-
-        if (pdfEntries.length === 0) {
-          return { canceled: false, files: [], folderName, count: 0 };
-        }
-
-        if (pdfEntries.length > FOLDER_OPEN_THRESHOLD) {
-          const targetWin = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined;
-          const { response } = await dialog.showMessageBox(targetWin, {
-            type: "question",
-            buttons: [`Open All (${pdfEntries.length})`, "Cancel"],
-            defaultId: 0,
-            cancelId: 1,
-            title: "Open Multiple Documents",
-            message: `Open ${pdfEntries.length} PDF documents from "${folderName}"?`,
-            detail: `Opening ${pdfEntries.length} tabs simultaneously may take a few moments and increase memory usage.`,
-          });
-          if (response !== 0) {
-            return { canceled: true };
-          }
-        }
-
-        const files = [];
-        for (const entry of pdfEntries) {
-          const filePath = path.join(folderPath, entry.name);
-          const data = await fs.readFile(filePath);
-          files.push({
-            name: entry.name,
-            path: filePath,
-            data: new Uint8Array(data),
-          });
-        }
-
-        return {
-          canceled: false,
-          files,
-          folderName,
-          count: files.length,
-        };
-      } catch (err) {
-        return {
-          canceled: false,
-          error: err && err.message ? err.message : String(err),
-          files: [],
-        };
-      }
-    }
 
     ipcMain.handle("dialog:open-pdf", async () => {
       const result = await dialog.showOpenDialog(mainWindow, {
@@ -475,6 +490,40 @@ if (!gotLock) {
       };
     });
 
+    ipcMain.handle("app:get-launch-target", async () => {
+      if (!pendingTarget) return null;
+      const target = pendingTarget;
+      pendingTarget = null;
+      if (target.type === "file") {
+        try {
+          const buf = await fs.readFile(target.path);
+          return {
+            type: "file",
+            files: [
+              {
+                name: path.basename(target.path),
+                path: target.path,
+                data: new Uint8Array(buf),
+              },
+            ],
+          };
+        } catch {
+          return null;
+        }
+      } else if (target.type === "directory") {
+        const res = await readPdfFolder(target.path);
+        if (res && !res.canceled && res.files && res.files.length) {
+          return {
+            type: "directory",
+            folderName: res.folderName,
+            files: res.files,
+          };
+        }
+        return null;
+      }
+      return null;
+    });
+
     ipcMain.handle("fileAssoc:getStatus", async () => {
       return fileAssoc.checkDefaultStatus();
     });
@@ -499,6 +548,14 @@ if (!gotLock) {
       return fileAssoc.chooseCustomIconDialog(mainWindow);
     });
 
+    ipcMain.handle("fileAssoc:getContextMenuStatus", async () => {
+      return fileAssoc.checkContextMenuStatus();
+    });
+
+    ipcMain.handle("fileAssoc:setContextMenuStatus", async (_event, enabled) => {
+      return fileAssoc.setContextMenuStatus(enabled);
+    });
+
     mainWindow = createWindow();
     buildMenu();
 
@@ -509,14 +566,14 @@ if (!gotLock) {
       });
     }
 
-    const first = await firstPdfArg(process.argv);
-    if (first) pendingFile = first;
+    const initialTarget = await resolveLaunchTarget(process.argv);
+    if (initialTarget) pendingTarget = initialTarget;
 
-    mainWindow.webContents.once("did-finish-load", () => {
-      if (pendingFile) {
-        const p = pendingFile;
-        pendingFile = null;
-        sendReadyFile(p);
+    mainWindow.webContents.once("did-finish-load", async () => {
+      if (pendingTarget) {
+        const t = pendingTarget;
+        pendingTarget = null;
+        await sendReadyTarget(t);
       }
       if (SMOKE) require("../scripts/smoke").runAppSmoke({ app, mainWindow });
     });

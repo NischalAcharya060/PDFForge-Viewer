@@ -580,6 +580,82 @@ async function openDefaultAppsSettings() {
   return false;
 }
 
+/**
+ * Check if the Windows Explorer context menu item for opening folders is enabled
+ */
+const CONTEXT_MENU_TITLE = "Open Folder in PDFForge Viewer";
+const REG_BG_KEY = "HKCU\\Software\\Classes\\Directory\\Background\\shell\\PDFForgeViewer";
+const REG_DIR_KEY = "HKCU\\Software\\Classes\\Directory\\shell\\PDFForgeViewer";
+
+async function checkContextMenuStatus() {
+  if (process.platform !== "win32") {
+    return { isEnabled: false, osSupported: false };
+  }
+  const bgCheck = await runRegCommand(["query", REG_BG_KEY, "/ve"]);
+  const dirCheck = await runRegCommand(["query", REG_DIR_KEY, "/ve"]);
+  const isEnabled = !bgCheck.error && !dirCheck.error;
+  return { isEnabled, osSupported: true };
+}
+
+async function setContextMenuStatus(enabled) {
+  if (process.platform !== "win32") {
+    return { success: false, message: "Context menu is only supported on Windows.", osSupported: false };
+  }
+
+  if (!enabled) {
+    await runRegCommand(["delete", REG_BG_KEY, "/f"]);
+    await runRegCommand(["delete", REG_DIR_KEY, "/f"]);
+    await notifyShellChange();
+    return { success: true, isEnabled: false, message: "Removed from Windows Explorer context menu." };
+  }
+
+  let exePath = process.execPath;
+  let bgOpenCmd = `"${exePath}" "%V"`;
+  let dirOpenCmd = `"${exePath}" "%1"`;
+  let iconPath = exePath;
+
+  const isPackaged = app ? Boolean(app.isPackaged) : false;
+  if (!isPackaged) {
+    const installedExe = path.join(
+      process.env.LOCALAPPDATA || "",
+      "Programs",
+      "PDFForge Viewer",
+      "PDFForge Viewer.exe"
+    );
+    if (fs.existsSync(installedExe)) {
+      exePath = installedExe;
+      bgOpenCmd = `"${exePath}" "%V"`;
+      dirOpenCmd = `"${exePath}" "%1"`;
+      iconPath = exePath;
+    } else {
+      const appRoot = path.resolve(__dirname, "..", "..");
+      bgOpenCmd = `"${exePath}" "${appRoot}" "%V"`;
+      dirOpenCmd = `"${exePath}" "${appRoot}" "%1"`;
+      const assetIcon = path.join(appRoot, "assets", "app-icon.ico");
+      iconPath = fs.existsSync(assetIcon) ? assetIcon : exePath;
+    }
+  }
+
+  const regOps = [
+    // Directory Background (right-click inside open folder)
+    ["add", REG_BG_KEY, "/ve", "/t", "REG_SZ", "/d", CONTEXT_MENU_TITLE, "/f"],
+    ["add", REG_BG_KEY, "/v", "Icon", "/t", "REG_SZ", "/d", iconPath, "/f"],
+    ["add", `${REG_BG_KEY}\\command`, "/ve", "/t", "REG_SZ", "/d", bgOpenCmd, "/f"],
+
+    // Directory (right-click on folder item)
+    ["add", REG_DIR_KEY, "/ve", "/t", "REG_SZ", "/d", CONTEXT_MENU_TITLE, "/f"],
+    ["add", REG_DIR_KEY, "/v", "Icon", "/t", "REG_SZ", "/d", iconPath, "/f"],
+    ["add", `${REG_DIR_KEY}\\command`, "/ve", "/t", "REG_SZ", "/d", dirOpenCmd, "/f"],
+  ];
+
+  for (const op of regOps) {
+    await runRegCommand(op);
+  }
+
+  await notifyShellChange();
+  return { success: true, isEnabled: true, message: "Added 'Open Folder in PDFForge Viewer' to Windows Explorer context menu!" };
+}
+
 module.exports = {
   checkDefaultStatus,
   getIconPreferences,
@@ -589,5 +665,7 @@ module.exports = {
   openDefaultAppsSettings,
   notifyShellChange,
   syncSavedIconPreference,
+  checkContextMenuStatus,
+  setContextMenuStatus,
 };
 

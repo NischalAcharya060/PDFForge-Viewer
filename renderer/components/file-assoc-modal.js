@@ -88,6 +88,37 @@ export async function updateDefaultAppStatus() {
   }
 }
 
+export async function updateContextMenuStatus() {
+  try {
+    if (window.pdfViewer?.getContextMenuStatus) {
+      const res = await window.pdfViewer.getContextMenuStatus();
+      const isEnabled = Boolean(res?.isEnabled);
+
+      if (el.contextMenuBadge) {
+        el.contextMenuBadge.className = isEnabled ? "status-pill success" : "status-pill neutral";
+        el.contextMenuBadge.innerHTML = isEnabled
+          ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+            Active in Context Menu`
+          : `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="8" x2="12" y2="12"/>
+              <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            Not in Context Menu`;
+      }
+
+      if (el.settingContextMenuToggle) {
+        el.settingContextMenuToggle.checked = isEnabled;
+      }
+      return res;
+    }
+  } catch (err) {
+    console.warn("Could not check context menu status:", err);
+  }
+}
+
 function updateExplorerPreview(iconId, customPath) {
   if (!el.explorerPreviewIcon) return;
 
@@ -270,6 +301,7 @@ export async function showFileAssocModal(initialTab = "viewer") {
 
   selectIconCard(selectedIconId);
   await updateDefaultAppStatus();
+  await updateContextMenuStatus();
 }
 
 export const showSettingsModal = showFileAssocModal;
@@ -500,11 +532,36 @@ export function initFileAssocModal() {
     });
   }
 
+  // Toggle Windows Explorer Context Menu
+  if (el.settingContextMenuToggle) {
+    el.settingContextMenuToggle.addEventListener("change", async (e) => {
+      const wantEnabled = e.target.checked;
+      try {
+        if (window.pdfViewer?.setContextMenuStatus) {
+          const res = await window.pdfViewer.setContextMenuStatus(wantEnabled);
+          if (res?.success) {
+            showToast(res.message || (wantEnabled ? "Context menu enabled" : "Context menu removed"), "success");
+          } else {
+            showToast(res?.message || "Failed to update context menu", "error");
+            e.target.checked = !wantEnabled;
+          }
+        }
+      } catch (err) {
+        showToast("Error updating context menu: " + (err?.message || err), "error");
+        e.target.checked = !wantEnabled;
+      } finally {
+        await updateContextMenuStatus();
+      }
+    });
+  }
+
   // Re-check status on window focus
   window.addEventListener("focus", () => {
     updateDefaultAppStatus();
+    updateContextMenuStatus();
   });
 
   // Initial check on load
   updateDefaultAppStatus();
+  updateContextMenuStatus();
 }

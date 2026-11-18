@@ -186,6 +186,8 @@ export const el = {
   btnBrowseCustomIcon: document.getElementById("btn-browse-custom-icon"),
   customIconPathLabel: document.getElementById("custom-icon-path-label"),
   explorerPreviewIcon: document.getElementById("explorer-preview-icon"),
+  contextMenuBadge: document.getElementById("context-menu-badge"),
+  settingContextMenuToggle: document.getElementById("setting-context-menu-toggle"),
   // Settings Form Controls
   settingsTabsBar: document.getElementById("settings-tabs-bar"),
   settingDefaultZoom: document.getElementById("setting-default-zoom"),
