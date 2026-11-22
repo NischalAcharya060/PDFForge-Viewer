@@ -17,9 +17,8 @@
     "build:dir": "electron-builder --dir",
     "build:windows": "electron-builder --win nsis",
     "build:linux": "node scripts/build-linux.js",
-    "build:snap": "node scripts/build-snap.js",
     "dist": "electron-builder --win nsis",
-    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/services/file-association.js && node --check electron/services/rich-to-pdf.js && node --check electron/services/text-to-pdf.js && node --check electron/utils/pdf-helpers.js && node --check scripts/build-linux.js && node --check scripts/build-snap.js && node scripts/lint-renderer.js",
+    "lint": "node --check electron/main.js && node --check electron/preload.js && node --check electron/services/file-association.js && node --check electron/services/rich-to-pdf.js && node --check electron/services/text-to-pdf.js && node --check electron/utils/pdf-helpers.js && node --check scripts/build-linux.js && node scripts/lint-renderer.js",
     "test": "npm run lint && npm run test:rich",
     "test:rich": "node scripts/rich-smoke.js"
   },
@@ -90,8 +89,7 @@
       "target": [
         "AppImage",
         "deb",
-        "tar.gz",
-        "snap"
+        "tar.gz"
       ],
       "executableName": "pdfforge-viewer",
       "icon": "assets/brand-icon.png",
@@ -118,17 +116,6 @@
     },
     "appImage": {
       "artifactName": "PDFForge-${version}-${arch}.${ext}"
-    },
-    "snap": {
-      "artifactName": "pdfforge-viewer_${version}_${arch}.${ext}",
-      "confinement": "strict",
-      "grade": "stable",
-      "summary": "A fast, private, offline desktop PDF viewer",
-      "plugs": [
-        "default",
-        "removable-media",
-        "cups-control"
-      ]
     }
   }
 }

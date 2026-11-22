@@ -22,6 +22,9 @@ contextBridge.exposeInMainWorld("pdfViewer", {
   rotatePage: (payload) => ipcRenderer.invoke("pdf:rotate-page", payload),
   extractPages: (payload) => ipcRenderer.invoke("pdf:extract-pages", payload),
   saveImage: (payload) => ipcRenderer.invoke("dialog:save-image", payload),
+  selectExportFolder: (payload) => ipcRenderer.invoke("dialog:select-export-folder", payload),
+  saveImageToFolder: (payload) => ipcRenderer.invoke("fs:save-image-to-folder", payload),
+  openPath: (targetPath) => ipcRenderer.invoke("shell:open-path", targetPath),
   toggleFullScreen: () => ipcRenderer.invoke("app:toggle-fullscreen"),
   isFullScreen: () => ipcRenderer.invoke("app:is-fullscreen"),
   getPathForFile: (file) => {

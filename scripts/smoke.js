@@ -367,22 +367,20 @@ async function runAppSmoke({ app, mainWindow }) {
     console.log("[smoke] split view closed ok:", Boolean(splitClosed));
     if (!splitClosed) throw new Error("Split view close button did not close pane");
 
-    // Verify New Features: Page Tools Dropdown & Actions
-    console.log("[smoke] Verifying Page Tools, Speech, and Fullscreen Mode features...");
-    const pageToolsBtnOk = await mainWindow.webContents.executeJavaScript(
-      "!document.getElementById('btn-add-page').disabled"
+    // Verify PNG Export, Speech, and Fullscreen Mode features
+    console.log("[smoke] Verifying Export to PNG, Speech, and Fullscreen Mode features...");
+    const exportBtnOk = await mainWindow.webContents.executeJavaScript(
+      "!document.getElementById('btn-export-image').disabled"
     );
-    console.log("[smoke] Page Tools button active on PDF:", Boolean(pageToolsBtnOk));
-    if (!pageToolsBtnOk) throw new Error("btn-add-page should be enabled when a PDF is open");
+    console.log("[smoke] Export PNG button active on PDF:", Boolean(exportBtnOk));
+    if (!exportBtnOk) throw new Error("btn-export-image should be enabled when a PDF is open");
 
-    // Click Page Tools button and check menu visibility
-    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-add-page').click();");
-    const pageMenuVisible = await mainWindow.webContents.executeJavaScript("!document.getElementById('add-page-menu').hidden");
-    console.log("[smoke] Page Tools menu opened:", Boolean(pageMenuVisible));
-    if (!pageMenuVisible) throw new Error("add-page-menu did not open when btn-add-page clicked");
-
-    // Close Page Tools menu
-    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-add-page').click();");
+    const exportElementsOk = await mainWindow.webContents.executeJavaScript(
+      "Boolean(document.getElementById('btn-export-current-page')) && " +
+      "Boolean(document.getElementById('btn-export-all-pages'))"
+    );
+    console.log("[smoke] Export PNG menu options present:", Boolean(exportElementsOk));
+    if (!exportElementsOk) throw new Error("Export PNG menu options missing");
 
     // Verify Read Aloud & Fullscreen buttons
     const speechBtnOk = await mainWindow.webContents.executeJavaScript("!document.getElementById('btn-speech').disabled");

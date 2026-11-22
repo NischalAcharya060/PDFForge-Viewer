@@ -31,7 +31,7 @@ import { getSettings, applyDomSettings } from '../services/settings-service.js';
 import { createNewTab, closeTab, cycleTabs, openMultipleFiles, toggleTwoPage, toggleSplitView, closeSplitView, setupSplitDivider, renderTabBar, snapshotCurrentTab, restoreTab, showTabContextMenu, hideTabContextMenu, closeOtherTabs, closeTabsToRight, duplicateTab, openTabInSplit, openSplitFile, onSplitDocSelectChange } from '../features/tabs/tabs.js';
 
 // Features — Viewer
-import { layoutPages, computeCurrentPage, collectVisiblePages, scrollToPage, prevPage, nextPage, setFit, zoomIn, zoomOut, zoomBy, actualSize, rotateClockwise, syncFitButtons, addBlankPageToCurrentDoc, appendPdfToCurrentDoc, deletePageFromCurrentDoc, rotatePageInCurrentDoc, extractPagesFromCurrentDoc, exportCurrentPageAsImage, toggleFullscreenMode, toggleSpeechReadAloud, stopSpeechReadAloud } from '../features/viewer/viewer.js';
+import { layoutPages, computeCurrentPage, collectVisiblePages, scrollToPage, prevPage, nextPage, setFit, zoomIn, zoomOut, zoomBy, actualSize, rotateClockwise, syncFitButtons, addBlankPageToCurrentDoc, appendPdfToCurrentDoc, deletePageFromCurrentDoc, rotatePageInCurrentDoc, extractPagesFromCurrentDoc, exportCurrentPageAsImage, exportAllPagesAsImages, toggleFullscreenMode, toggleSpeechReadAloud, stopSpeechReadAloud } from '../features/viewer/viewer.js';
 
 // Features — Editor
 import { initQuill, openTextEditor, newTextFile, exitEditor, leaveEditor, savePdf, setEditorStatus, updateEditorChrome, insertWordPageBreak, insertWordHr, applyEditorLineSpacing, syncOptionsFromFields, toggleEditorOptions, zoomDocIn, zoomDocOut, updateDocZoom } from '../features/editor/editor.js';
@@ -53,46 +53,44 @@ let dragDepth = 0;
 function bindEvents() {
   if (el.btnNewTab) el.btnNewTab.addEventListener("click", () => createNewTab());
   if (el.btnTwoPage) el.btnTwoPage.addEventListener("click", toggleTwoPage);
-  if (el.btnAddPage) {
-    el.btnAddPage.addEventListener("click", (e) => {
+  if (el.btnExportImage) {
+    el.btnExportImage.addEventListener("click", (e) => {
       e.stopPropagation();
-      if (el.addPageMenu) el.addPageMenu.hidden = !el.addPageMenu.hidden;
+      if (!state.doc || !state.pages.length) return;
+      if (state.pages.length <= 1) {
+        exportCurrentPageAsImage();
+        return;
+      }
+      if (!el.exportImageMenu) return;
+      const willShow = el.exportImageMenu.hidden;
+      if (willShow) {
+        if (el.exportCurrentPageLabel) {
+          el.exportCurrentPageLabel.textContent = `Export Current Page (Page ${state.currentPage}) as PNG`;
+        }
+        if (el.exportAllPagesLabel) {
+          el.exportAllPagesLabel.textContent = `Convert All Pages (${state.pages.length} Pages) to PNG…`;
+        }
+        const rect = el.btnExportImage.getBoundingClientRect();
+        el.exportImageMenu.style.position = "fixed";
+        el.exportImageMenu.style.top = `${Math.round(rect.bottom + 4)}px`;
+        el.exportImageMenu.style.left = `${Math.round(rect.left)}px`;
+        el.exportImageMenu.style.zIndex = "99999";
+        el.exportImageMenu.hidden = false;
+      } else {
+        el.exportImageMenu.hidden = true;
+      }
     });
   }
-  if (el.btnAddBlankPage) {
-    el.btnAddBlankPage.addEventListener("click", () => {
-      if (el.addPageMenu) el.addPageMenu.hidden = true;
-      addBlankPageToCurrentDoc();
-    });
-  }
-  if (el.btnAppendPdfPages) {
-    el.btnAppendPdfPages.addEventListener("click", () => {
-      if (el.addPageMenu) el.addPageMenu.hidden = true;
-      appendPdfToCurrentDoc();
-    });
-  }
-  if (el.btnExportPageImg) {
-    el.btnExportPageImg.addEventListener("click", () => {
-      if (el.addPageMenu) el.addPageMenu.hidden = true;
+  if (el.btnExportCurrentPage) {
+    el.btnExportCurrentPage.addEventListener("click", () => {
+      if (el.exportImageMenu) el.exportImageMenu.hidden = true;
       exportCurrentPageAsImage();
     });
   }
-  if (el.btnExtractPage) {
-    el.btnExtractPage.addEventListener("click", () => {
-      if (el.addPageMenu) el.addPageMenu.hidden = true;
-      extractPagesFromCurrentDoc([state.currentPage - 1]);
-    });
-  }
-  if (el.btnRotatePage) {
-    el.btnRotatePage.addEventListener("click", () => {
-      if (el.addPageMenu) el.addPageMenu.hidden = true;
-      rotatePageInCurrentDoc(state.currentPage - 1, 90);
-    });
-  }
-  if (el.btnDeletePage) {
-    el.btnDeletePage.addEventListener("click", () => {
-      if (el.addPageMenu) el.addPageMenu.hidden = true;
-      deletePageFromCurrentDoc(state.currentPage - 1);
+  if (el.btnExportAllPages) {
+    el.btnExportAllPages.addEventListener("click", () => {
+      if (el.exportImageMenu) el.exportImageMenu.hidden = true;
+      exportAllPagesAsImages();
     });
   }
   if (el.btnSpeech) {
@@ -117,27 +115,6 @@ function bindEvents() {
       }
     });
   }
-  if (el.ctxThumbRotate) {
-    el.ctxThumbRotate.addEventListener("click", () => {
-      const idx = contextMenuPageIndex >= 0 ? contextMenuPageIndex : state.currentPage - 1;
-      hideThumbContextMenu();
-      rotatePageInCurrentDoc(idx, 90);
-    });
-  }
-  if (el.ctxThumbDelete) {
-    el.ctxThumbDelete.addEventListener("click", () => {
-      const idx = contextMenuPageIndex >= 0 ? contextMenuPageIndex : state.currentPage - 1;
-      hideThumbContextMenu();
-      deletePageFromCurrentDoc(idx);
-    });
-  }
-  if (el.ctxThumbExtract) {
-    el.ctxThumbExtract.addEventListener("click", () => {
-      const idx = contextMenuPageIndex >= 0 ? contextMenuPageIndex : state.currentPage - 1;
-      hideThumbContextMenu();
-      extractPagesFromCurrentDoc([idx]);
-    });
-  }
   if (el.ctxThumbExportImg) {
     el.ctxThumbExportImg.addEventListener("click", () => {
       const idx = contextMenuPageIndex >= 0 ? contextMenuPageIndex : state.currentPage - 1;
@@ -145,28 +122,30 @@ function bindEvents() {
       exportCurrentPageAsImage(idx);
     });
   }
-  if (el.ctxThumbAddBlank) {
-    el.ctxThumbAddBlank.addEventListener("click", () => {
+  if (el.ctxThumbExportAll) {
+    el.ctxThumbExportAll.addEventListener("click", () => {
       hideThumbContextMenu();
-      addBlankPageToCurrentDoc();
-    });
-  }
-  if (el.ctxThumbAppendPdf) {
-    el.ctxThumbAppendPdf.addEventListener("click", () => {
-      hideThumbContextMenu();
-      appendPdfToCurrentDoc();
+      exportAllPagesAsImages();
     });
   }
 
   window.addEventListener("click", (e) => {
-    if (el.addPageMenu && !e.target.closest(".dropdown-wrapper")) {
-      el.addPageMenu.hidden = true;
+    if (el.exportImageMenu && !e.target.closest("#export-image-wrapper") && !e.target.closest("#export-image-menu")) {
+      el.exportImageMenu.hidden = true;
     }
     if (el.tabContextMenu && !e.target.closest("#tab-context-menu")) {
       hideTabContextMenu();
     }
     if (el.thumbContextMenu && !e.target.closest("#thumb-context-menu")) {
       hideThumbContextMenu();
+    }
+  });
+
+  window.addEventListener("resize", () => {
+    if (el.exportImageMenu && !el.exportImageMenu.hidden && el.btnExportImage) {
+      const rect = el.btnExportImage.getBoundingClientRect();
+      el.exportImageMenu.style.top = `${Math.round(rect.bottom + 4)}px`;
+      el.exportImageMenu.style.left = `${Math.round(rect.left)}px`;
     }
   });
 

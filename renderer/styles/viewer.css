@@ -1083,8 +1083,9 @@ body.zen-mode #viewport {
 }
 
 /* ==========================================================================
-   Page Tools Dropdown Styling
+   Export to PNG Dropdown Styling
    ========================================================================== */
-#add-page-menu {
-  min-width: 215px;
+#export-image-menu {
+  min-width: 250px;
+  z-index: 99999 !important;
 }

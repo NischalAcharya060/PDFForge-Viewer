@@ -9,6 +9,10 @@ const { PDFDocument, degrees } = require("pdf-lib");
 const fileAssoc = require("./services/file-association");
 
 const SMOKE = process.argv.includes("--smoke") || process.env.PDFVIEWER_SMOKE === "1";
+if (SMOKE) {
+  const os = require("node:os");
+  app.setPath("userData", path.join(os.tmpdir(), `pdfforge-smoke-${process.pid}`));
+}
 
 let mainWindow = null;
 let pendingTarget = null;
@@ -471,6 +475,44 @@ if (!gotLock) {
         return { canceled: false, filePath: result.filePath, name: path.basename(result.filePath) };
       } catch (err) {
         return { canceled: true, error: err && err.message ? err.message : String(err) };
+      }
+    });
+
+    ipcMain.handle("dialog:select-export-folder", async (_event, { defaultName } = {}) => {
+      try {
+        const result = await dialog.showOpenDialog(mainWindow, {
+          title: "Select Folder to Convert & Save All PNG Pages",
+          properties: ["openDirectory", "createDirectory"],
+          buttonLabel: "Save All Pages Here",
+        });
+        if (result.canceled || !result.filePaths.length) return { canceled: true };
+        return { canceled: false, folderPath: result.filePaths[0] };
+      } catch (err) {
+        return { canceled: true, error: err?.message || String(err) };
+      }
+    });
+
+    ipcMain.handle("fs:save-image-to-folder", async (_event, { folderPath, fileName, dataUrl }) => {
+      try {
+        if (!folderPath || !fileName || !dataUrl) return { success: false, error: "Missing required parameters" };
+        const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+        const destPath = path.join(folderPath, fileName);
+        await fs.writeFile(destPath, Buffer.from(base64Data, "base64"));
+        return { success: true, filePath: destPath };
+      } catch (err) {
+        return { success: false, error: err?.message || String(err) };
+      }
+    });
+
+    ipcMain.handle("shell:open-path", async (_event, targetPath) => {
+      try {
+        if (targetPath) {
+          await shell.openPath(targetPath);
+          return { success: true };
+        }
+        return { success: false };
+      } catch (err) {
+        return { success: false, error: err?.message || String(err) };
       }
     });
 

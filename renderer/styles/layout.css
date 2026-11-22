@@ -11,12 +11,7 @@
   user-select: none;
   z-index: 200;
   position: relative;
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: none;
-}
-#toolbar::-webkit-scrollbar {
-  display: none;
+  overflow: visible;
 }
 
 .toolbar-group {

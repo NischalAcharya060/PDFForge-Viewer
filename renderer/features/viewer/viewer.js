@@ -46,7 +46,7 @@ export function updateControls() {
     el.btnFitWidth,
     el.btnFitPage,
     el.btnTwoPage,
-    el.btnAddPage,
+    el.btnExportImage,
     el.btnSpeech,
   ]) {
     if (btn) btn.disabled = !hasDoc;
@@ -750,15 +750,32 @@ export async function extractPagesFromCurrentDoc(pageIndices = [state.currentPag
   }
 }
 
+async function renderPageProxyToPng(pageProxy, scale = 2.0) {
+  const viewport = pageProxy.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(viewport.width);
+  canvas.height = Math.round(viewport.height);
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const task = pageProxy.render({ canvasContext: ctx, viewport });
+  await task.promise;
+  return canvas.toDataURL("image/png");
+}
+
 export async function exportCurrentPageAsImage(pageIndex = (state.currentPage - 1)) {
   if (!state.doc || !state.pages.length) return;
   const p = state.pages[pageIndex];
-  if (!p || !p.canvas) {
-    showToast("Page is still rendering. Please try again in a moment.", "info");
-    return;
-  }
+  if (!p) return;
   try {
-    const dataUrl = p.canvas.toDataURL("image/png");
+    setLoading(true);
+    let dataUrl = "";
+    if (p.canvas && p.rendered) {
+      dataUrl = p.canvas.toDataURL("image/png");
+    } else {
+      const pageProxy = await state.doc.getPage(pageIndex + 1);
+      dataUrl = await renderPageProxyToPng(pageProxy, 2.0);
+    }
     const docBase = state.name ? state.name.replace(/\.pdf$/i, "") : "page";
     const defaultName = `${docBase}-page-${pageIndex + 1}.png`;
     const res = await window.pdfViewer.saveImage({ dataUrl, defaultName });
@@ -767,6 +784,58 @@ export async function exportCurrentPageAsImage(pageIndex = (state.currentPage - 
     }
   } catch (err) {
     showToast("Error exporting page image: " + (err?.message || err), "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+export async function exportAllPagesAsImages() {
+  if (!state.doc || !state.pages.length) return;
+  const total = state.pages.length;
+  const docBase = state.name ? state.name.replace(/\.pdf$/i, "") : "document";
+
+  try {
+    const folderRes = await window.pdfViewer.selectExportFolder({ defaultName: docBase });
+    if (!folderRes || folderRes.canceled || !folderRes.folderPath) return;
+
+    setLoading(true);
+    const folderPath = folderRes.folderPath;
+    const padLength = String(total).length > 2 ? String(total).length : 2;
+
+    showToast(`Converting ${total} pages to PNG… (0/${total})`, "info");
+
+    for (let i = 0; i < total; i++) {
+      const p = state.pages[i];
+      let dataUrl = "";
+      if (p && p.canvas && p.rendered) {
+        dataUrl = p.canvas.toDataURL("image/png");
+      } else {
+        const pageProxy = await state.doc.getPage(i + 1);
+        dataUrl = await renderPageProxyToPng(pageProxy, 2.0);
+      }
+
+      const pageNumStr = String(i + 1).padStart(padLength, "0");
+      const fileName = `${docBase}-page-${pageNumStr}.png`;
+
+      await window.pdfViewer.saveImageToFolder({
+        folderPath,
+        fileName,
+        dataUrl,
+      });
+
+      if ((i + 1) % 5 === 0 || i === total - 1) {
+        showToast(`Converting pages to PNG… (${i + 1}/${total})`, "info");
+      }
+    }
+
+    showToast(`Successfully converted all ${total} pages to PNG!`, "success");
+    if (window.pdfViewer?.openPath) {
+      window.pdfViewer.openPath(folderPath);
+    }
+  } catch (err) {
+    showToast("Error converting pages: " + (err?.message || err), "error");
+  } finally {
+    setLoading(false);
   }
 }
 
