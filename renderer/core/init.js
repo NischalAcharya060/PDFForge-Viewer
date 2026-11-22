@@ -31,13 +31,13 @@ import { getSettings, applyDomSettings } from '../services/settings-service.js';
 import { createNewTab, closeTab, cycleTabs, openMultipleFiles, toggleTwoPage, toggleSplitView, closeSplitView, setupSplitDivider, renderTabBar, snapshotCurrentTab, restoreTab, showTabContextMenu, hideTabContextMenu, closeOtherTabs, closeTabsToRight, duplicateTab, openTabInSplit, openSplitFile, onSplitDocSelectChange } from '../features/tabs/tabs.js';
 
 // Features — Viewer
-import { layoutPages, computeCurrentPage, collectVisiblePages, scrollToPage, prevPage, nextPage, setFit, zoomIn, zoomOut, zoomBy, actualSize, rotateClockwise, syncFitButtons, addBlankPageToCurrentDoc, appendPdfToCurrentDoc } from '../features/viewer/viewer.js';
+import { layoutPages, computeCurrentPage, collectVisiblePages, scrollToPage, prevPage, nextPage, setFit, zoomIn, zoomOut, zoomBy, actualSize, rotateClockwise, syncFitButtons, addBlankPageToCurrentDoc, appendPdfToCurrentDoc, deletePageFromCurrentDoc, rotatePageInCurrentDoc, extractPagesFromCurrentDoc, exportCurrentPageAsImage, toggleFullscreenMode, toggleSpeechReadAloud, stopSpeechReadAloud } from '../features/viewer/viewer.js';
 
 // Features — Editor
 import { initQuill, openTextEditor, newTextFile, exitEditor, leaveEditor, savePdf, setEditorStatus, updateEditorChrome, insertWordPageBreak, insertWordHr, applyEditorLineSpacing, syncOptionsFromFields, toggleEditorOptions, zoomDocIn, zoomDocOut, updateDocZoom } from '../features/editor/editor.js';
 
 // Features — Thumbnails
-import { toggleThumbnails, switchSidebarTab, queueThumbRenders } from '../features/thumbnails/thumbnails.js';
+import { toggleThumbnails, switchSidebarTab, queueThumbRenders, showThumbContextMenu, hideThumbContextMenu, contextMenuPageIndex } from '../features/thumbnails/thumbnails.js';
 
 // Features — Search
 import { debounceSearch, toggleFindBar, executeSearch, findNext, findPrev, searchDebounceTimer } from '../features/search/search.js';
@@ -71,12 +71,102 @@ function bindEvents() {
       appendPdfToCurrentDoc();
     });
   }
+  if (el.btnExportPageImg) {
+    el.btnExportPageImg.addEventListener("click", () => {
+      if (el.addPageMenu) el.addPageMenu.hidden = true;
+      exportCurrentPageAsImage();
+    });
+  }
+  if (el.btnExtractPage) {
+    el.btnExtractPage.addEventListener("click", () => {
+      if (el.addPageMenu) el.addPageMenu.hidden = true;
+      extractPagesFromCurrentDoc([state.currentPage - 1]);
+    });
+  }
+  if (el.btnRotatePage) {
+    el.btnRotatePage.addEventListener("click", () => {
+      if (el.addPageMenu) el.addPageMenu.hidden = true;
+      rotatePageInCurrentDoc(state.currentPage - 1, 90);
+    });
+  }
+  if (el.btnDeletePage) {
+    el.btnDeletePage.addEventListener("click", () => {
+      if (el.addPageMenu) el.addPageMenu.hidden = true;
+      deletePageFromCurrentDoc(state.currentPage - 1);
+    });
+  }
+  if (el.btnSpeech) {
+    el.btnSpeech.addEventListener("click", () => toggleSpeechReadAloud());
+  }
+  if (el.btnFullscreen) {
+    el.btnFullscreen.addEventListener("click", () => toggleFullscreenMode());
+  }
+  if (el.btnZenExit) {
+    el.btnZenExit.addEventListener("click", () => toggleFullscreenMode());
+  }
+
+  // Thumbnail Page Context Menu
+  if (el.thumbList) {
+    el.thumbList.addEventListener("contextmenu", (e) => {
+      const item = e.target.closest(".thumb");
+      if (!item) return;
+      e.preventDefault();
+      const index = Number(item.dataset.index);
+      if (Number.isInteger(index)) {
+        showThumbContextMenu(e.clientX, e.clientY, index);
+      }
+    });
+  }
+  if (el.ctxThumbRotate) {
+    el.ctxThumbRotate.addEventListener("click", () => {
+      const idx = contextMenuPageIndex >= 0 ? contextMenuPageIndex : state.currentPage - 1;
+      hideThumbContextMenu();
+      rotatePageInCurrentDoc(idx, 90);
+    });
+  }
+  if (el.ctxThumbDelete) {
+    el.ctxThumbDelete.addEventListener("click", () => {
+      const idx = contextMenuPageIndex >= 0 ? contextMenuPageIndex : state.currentPage - 1;
+      hideThumbContextMenu();
+      deletePageFromCurrentDoc(idx);
+    });
+  }
+  if (el.ctxThumbExtract) {
+    el.ctxThumbExtract.addEventListener("click", () => {
+      const idx = contextMenuPageIndex >= 0 ? contextMenuPageIndex : state.currentPage - 1;
+      hideThumbContextMenu();
+      extractPagesFromCurrentDoc([idx]);
+    });
+  }
+  if (el.ctxThumbExportImg) {
+    el.ctxThumbExportImg.addEventListener("click", () => {
+      const idx = contextMenuPageIndex >= 0 ? contextMenuPageIndex : state.currentPage - 1;
+      hideThumbContextMenu();
+      exportCurrentPageAsImage(idx);
+    });
+  }
+  if (el.ctxThumbAddBlank) {
+    el.ctxThumbAddBlank.addEventListener("click", () => {
+      hideThumbContextMenu();
+      addBlankPageToCurrentDoc();
+    });
+  }
+  if (el.ctxThumbAppendPdf) {
+    el.ctxThumbAppendPdf.addEventListener("click", () => {
+      hideThumbContextMenu();
+      appendPdfToCurrentDoc();
+    });
+  }
+
   window.addEventListener("click", (e) => {
     if (el.addPageMenu && !e.target.closest(".dropdown-wrapper")) {
       el.addPageMenu.hidden = true;
     }
     if (el.tabContextMenu && !e.target.closest("#tab-context-menu")) {
       hideTabContextMenu();
+    }
+    if (el.thumbContextMenu && !e.target.closest("#thumb-context-menu")) {
+      hideThumbContextMenu();
     }
   });
 
@@ -603,6 +693,11 @@ function bindEvents() {
         }
         return;
       }
+      if (e.shiftKey && k === "r") {
+        e.preventDefault();
+        toggleSpeechReadAloud();
+        return;
+      }
       if (k === "r") {
         if (state.editor.active) {
           if (quill) {
@@ -622,7 +717,27 @@ function bindEvents() {
         return;
       }
     }
+    if (key === "F11") {
+      e.preventDefault();
+      toggleFullscreenMode();
+      return;
+    }
     if (key === "Escape") {
+      if (document.body.classList.contains("zen-mode")) {
+        e.preventDefault();
+        toggleFullscreenMode();
+        return;
+      }
+      if (el.thumbContextMenu && !el.thumbContextMenu.hidden) {
+        e.preventDefault();
+        hideThumbContextMenu();
+        return;
+      }
+      if (el.addPageMenu && !el.addPageMenu.hidden) {
+        e.preventDefault();
+        el.addPageMenu.hidden = true;
+        return;
+      }
       if (el.tabContextMenu && !el.tabContextMenu.hidden) {
         e.preventDefault();
         hideTabContextMenu();
@@ -779,6 +894,12 @@ function bindEvents() {
         break;
       case "toggle-theme":
         toggleTheme();
+        break;
+      case "toggle-fullscreen":
+        toggleFullscreenMode();
+        break;
+      case "read-aloud":
+        toggleSpeechReadAloud();
         break;
       default:
         break;

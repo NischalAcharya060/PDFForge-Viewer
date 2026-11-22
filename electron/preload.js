@@ -18,6 +18,12 @@ contextBridge.exposeInMainWorld("pdfViewer", {
   savePdf: (payload) => ipcRenderer.invoke("dialog:save-pdf", payload),
   addBlankPage: (data) => ipcRenderer.invoke("pdf:add-blank-page", data),
   appendPdf: (payload) => ipcRenderer.invoke("pdf:append-pdf", payload),
+  deletePage: (payload) => ipcRenderer.invoke("pdf:delete-page", payload),
+  rotatePage: (payload) => ipcRenderer.invoke("pdf:rotate-page", payload),
+  extractPages: (payload) => ipcRenderer.invoke("pdf:extract-pages", payload),
+  saveImage: (payload) => ipcRenderer.invoke("dialog:save-image", payload),
+  toggleFullScreen: () => ipcRenderer.invoke("app:toggle-fullscreen"),
+  isFullScreen: () => ipcRenderer.invoke("app:is-fullscreen"),
   getPathForFile: (file) => {
     try {
       return webUtils.getPathForFile(file);

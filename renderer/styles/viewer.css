@@ -1003,3 +1003,88 @@ kbd {
 [data-smooth-scroll="true"] #secondary-page-host {
   scroll-behavior: smooth;
 }
+
+/* ==========================================================================
+   Zen / Fullscreen Mode
+   ========================================================================== */
+body.zen-mode #tab-bar,
+body.zen-mode #toolbar {
+  display: none !important;
+}
+
+body.zen-mode #viewport {
+  height: 100vh !important;
+  max-height: 100vh !important;
+}
+
+.zen-exit-pill {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: var(--panel, #ffffff);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.15));
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  color: var(--text, #1f2328);
+  font-size: 12px;
+  font-weight: 500;
+  backdrop-filter: blur(12px);
+  animation: slideDownZen 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+@keyframes slideDownZen {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -10px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.zen-exit-btn {
+  background: var(--accent, #e5484d);
+  color: #ffffff;
+  border: none;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.zen-exit-btn:hover {
+  opacity: 0.9;
+}
+
+/* ==========================================================================
+   Text to Speech (Read Aloud) Active State
+   ========================================================================== */
+#btn-speech.active {
+  background: var(--accent-soft, rgba(229, 72, 77, 0.12));
+  color: var(--accent, #e5484d);
+  box-shadow: 0 0 0 1px var(--accent, #e5484d);
+  animation: speechPulse 1.8s infinite ease-in-out;
+}
+
+@keyframes speechPulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+  100% { transform: scale(1); }
+}
+
+/* ==========================================================================
+   Page Tools Dropdown Styling
+   ========================================================================== */
+#add-page-menu {
+  min-width: 215px;
+}

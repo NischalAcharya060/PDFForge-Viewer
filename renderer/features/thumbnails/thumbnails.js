@@ -291,3 +291,24 @@ export function switchSidebarTab(tab) {
     queueThumbRenders();
   }
 }
+
+export let contextMenuPageIndex = -1;
+
+export function showThumbContextMenu(x, y, pageIndex) {
+  if (!el.thumbContextMenu) return;
+  contextMenuPageIndex = pageIndex;
+  const menuW = 210;
+  const menuH = 260;
+  const posX = Math.min(x, Math.max(10, window.innerWidth - menuW - 10));
+  const posY = Math.min(y, Math.max(10, window.innerHeight - menuH - 10));
+  el.thumbContextMenu.style.left = `${posX}px`;
+  el.thumbContextMenu.style.top = `${posY}px`;
+  el.thumbContextMenu.hidden = false;
+}
+
+export function hideThumbContextMenu() {
+  if (el.thumbContextMenu) {
+    el.thumbContextMenu.hidden = true;
+    contextMenuPageIndex = -1;
+  }
+}

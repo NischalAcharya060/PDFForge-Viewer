@@ -8,7 +8,7 @@ import { showToast } from '../../components/toast.js';
 import { updateActiveThumb, updateThumbFromPageCanvas, thumbsVisible, applyThumbnails, queueThumbRenders, buildThumbnails, buildOutline } from '../thumbnails/thumbnails.js';
 import { setLoading, openDocument } from '../../services/document-service.js';
 import { renderTabBar } from '../tabs/tabs.js';
-import { saveLastReadPage } from '../../services/settings-service.js';
+import { saveLastReadPage, getSettings } from '../../services/settings-service.js';
 
 export function availableSpace() {
   const w = el.pageHost.clientWidth - PAGE_PAD * 2;
@@ -47,6 +47,7 @@ export function updateControls() {
     el.btnFitPage,
     el.btnTwoPage,
     el.btnAddPage,
+    el.btnSpeech,
   ]) {
     if (btn) btn.disabled = !hasDoc;
   }
@@ -624,7 +625,7 @@ export async function addBlankPageToCurrentDoc() {
       state.pdfModified = true;
       if (currentTab) currentTab.dirty = true;
       await openDocument(res.data, state.name, state.filePath);
-      goToPage(state.pages.length);
+      scrollToPage(state.pages.length - 1);
       renderTabBar();
       showToast("Added blank page to document", "success");
     } else {
@@ -655,7 +656,7 @@ export async function appendPdfToCurrentDoc() {
       if (currentTab) currentTab.dirty = true;
       const prevCount = state.pages.length;
       await openDocument(res.data, state.name, state.filePath);
-      goToPage(prevCount + 1);
+      scrollToPage(prevCount);
       renderTabBar();
       showToast("Inserted pages from PDF", "success");
     } else {
@@ -665,6 +666,216 @@ export async function appendPdfToCurrentDoc() {
     showToast("Error inserting pages: " + (err && err.message ? err.message : String(err)), "error");
   } finally {
     setLoading(false);
+  }
+}
+
+export async function deletePageFromCurrentDoc(pageIndex = (state.currentPage - 1)) {
+  if (!state.data || !state.pages.length) return;
+  if (state.pages.length <= 1) {
+    showToast("Cannot delete the only page in the document", "warning");
+    return;
+  }
+  const confirmed = window.confirm(`Are you sure you want to delete Page ${pageIndex + 1}?`);
+  if (!confirmed) return;
+
+  setLoading(true);
+  try {
+    const res = await window.pdfViewer.deletePage({ pdfData: state.data, pageIndex });
+    if (res && res.success && res.data) {
+      state.data = res.data;
+      const currentTab = tabs.find((t) => t.id === activeTabId);
+      if (currentTab) currentTab.data = res.data;
+      state.pdfModified = true;
+      if (currentTab) currentTab.dirty = true;
+      await openDocument(res.data, state.name, state.filePath);
+      const target = Math.min(pageIndex, state.pages.length - 1);
+      scrollToPage(target);
+      renderTabBar();
+      showToast(`Deleted Page ${pageIndex + 1}`, "success");
+    } else {
+      showToast("Failed to delete page: " + (res?.error || "unknown error"), "error");
+    }
+  } catch (err) {
+    showToast("Error deleting page: " + (err?.message || err), "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+export async function rotatePageInCurrentDoc(pageIndex = (state.currentPage - 1), angleDelta = 90) {
+  if (!state.data || !state.pages.length) return;
+  setLoading(true);
+  try {
+    const res = await window.pdfViewer.rotatePage({ pdfData: state.data, pageIndex, rotationDelta: angleDelta });
+    if (res && res.success && res.data) {
+      state.data = res.data;
+      const currentTab = tabs.find((t) => t.id === activeTabId);
+      if (currentTab) currentTab.data = res.data;
+      state.pdfModified = true;
+      if (currentTab) currentTab.dirty = true;
+      await openDocument(res.data, state.name, state.filePath);
+      scrollToPage(pageIndex);
+      renderTabBar();
+      showToast(`Rotated Page ${pageIndex + 1} by ${angleDelta}°`, "success");
+    } else {
+      showToast("Failed to rotate page: " + (res?.error || "unknown error"), "error");
+    }
+  } catch (err) {
+    showToast("Error rotating page: " + (err?.message || err), "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+export async function extractPagesFromCurrentDoc(pageIndices = [state.currentPage - 1]) {
+  if (!state.data || !state.pages.length) return;
+  const indices = Array.isArray(pageIndices) ? pageIndices : [pageIndices];
+  const docBase = state.name ? state.name.replace(/\.pdf$/i, "") : "document";
+  const defaultName = `${docBase}-p${indices.map((i) => i + 1).join("-")}.pdf`;
+
+  setLoading(true);
+  try {
+    const res = await window.pdfViewer.extractPages({
+      pdfData: state.data,
+      pageIndices: indices,
+      defaultName,
+    });
+    if (res && !res.canceled && res.filePath) {
+      showToast(`Extracted page(s) to ${res.name}`, "success");
+    }
+  } catch (err) {
+    showToast("Error extracting page: " + (err?.message || err), "error");
+  } finally {
+    setLoading(false);
+  }
+}
+
+export async function exportCurrentPageAsImage(pageIndex = (state.currentPage - 1)) {
+  if (!state.doc || !state.pages.length) return;
+  const p = state.pages[pageIndex];
+  if (!p || !p.canvas) {
+    showToast("Page is still rendering. Please try again in a moment.", "info");
+    return;
+  }
+  try {
+    const dataUrl = p.canvas.toDataURL("image/png");
+    const docBase = state.name ? state.name.replace(/\.pdf$/i, "") : "page";
+    const defaultName = `${docBase}-page-${pageIndex + 1}.png`;
+    const res = await window.pdfViewer.saveImage({ dataUrl, defaultName });
+    if (res && !res.canceled && res.filePath) {
+      showToast(`Saved Page ${pageIndex + 1} as ${res.name}`, "success");
+    }
+  } catch (err) {
+    showToast("Error exporting page image: " + (err?.message || err), "error");
+  }
+}
+
+let isSpeechActive = false;
+
+export function stopSpeechReadAloud() {
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    window.speechSynthesis.cancel();
+  }
+  isSpeechActive = false;
+  if (el.btnSpeech) el.btnSpeech.classList.remove("active");
+}
+
+export async function toggleSpeechReadAloud() {
+  if (typeof window === "undefined" || !window.speechSynthesis) {
+    showToast("Speech synthesis is not supported on this platform.", "warning");
+    return;
+  }
+
+  if (isSpeechActive || window.speechSynthesis.speaking) {
+    stopSpeechReadAloud();
+    showToast("Read aloud paused/stopped", "info");
+    return;
+  }
+
+  if (!state.doc || !state.pages.length) {
+    showToast("No active PDF document to read aloud.", "info");
+    return;
+  }
+
+  const pageIdx = state.currentPage - 1;
+  const p = state.pages[pageIdx];
+  if (!p) return;
+
+  try {
+    const settings = getSettings();
+    let textToRead = "";
+    let isSelection = false;
+
+    if (settings.speechMode !== "page" && window.getSelection) {
+      const selected = window.getSelection().toString().trim();
+      if (selected && selected.length > 1) {
+        textToRead = selected;
+        isSelection = true;
+      }
+    }
+
+    if (!textToRead) {
+      if (!p.textContent) {
+        p.textContent = await p.page.getTextContent();
+      }
+      const words = (p.textContent.items || []).map((it) => it.str).filter(Boolean);
+      textToRead = words.join(" ").replace(/\s+/g, " ").trim();
+    }
+
+    if (!textToRead) {
+      showToast(`No readable text found on Page ${state.currentPage}. (It may be a scanned image)`, "info");
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(textToRead);
+    utterance.rate = Number(settings.speechRate) || 1.0;
+    utterance.pitch = Number(settings.speechPitch) || 1.0;
+    utterance.volume = Number(settings.speechVolume) || 1.0;
+
+    if (settings.speechVoice) {
+      const voices = window.speechSynthesis.getVoices();
+      const matched = voices.find((v) => v.voiceURI === settings.speechVoice || v.name === settings.speechVoice);
+      if (matched) utterance.voice = matched;
+    }
+
+    utterance.onstart = () => {
+      isSpeechActive = true;
+      if (el.btnSpeech) el.btnSpeech.classList.add("active");
+      showToast(isSelection ? "Reading selected text aloud…" : `Reading Page ${state.currentPage} aloud…`, "info");
+    };
+
+    utterance.onend = () => {
+      isSpeechActive = false;
+      if (el.btnSpeech) el.btnSpeech.classList.remove("active");
+    };
+
+    utterance.onerror = (e) => {
+      isSpeechActive = false;
+      if (el.btnSpeech) el.btnSpeech.classList.remove("active");
+      if (e.error !== "canceled" && e.error !== "interrupted") {
+        showToast("Speech error: " + e.error, "error");
+      }
+    };
+
+    window.speechSynthesis.speak(utterance);
+  } catch (err) {
+    showToast("Could not read text: " + (err?.message || err), "error");
+  }
+}
+
+export async function toggleFullscreenMode() {
+  if (!window.pdfViewer?.toggleFullScreen) return;
+  try {
+    const isFull = await window.pdfViewer.toggleFullScreen();
+    document.body.classList.toggle("zen-mode", Boolean(isFull));
+    if (el.zenExitPill) el.zenExitPill.hidden = !isFull;
+    if (el.btnFullscreen) el.btnFullscreen.classList.toggle("active", Boolean(isFull));
+    layoutPages();
+    if (isFull) {
+      showToast("Fullscreen Mode (Press F11 or Esc to exit)", "info");
+    }
+  } catch (err) {
+    console.warn("Fullscreen toggle error:", err);
   }
 }
 

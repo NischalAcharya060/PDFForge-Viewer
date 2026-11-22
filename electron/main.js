@@ -5,7 +5,7 @@ const { pathToFileURL } = require("node:url");
 const { textToPdf } = require("./services/text-to-pdf");
 const { richToPdf } = require("./services/rich-to-pdf");
 const { looksLikePdf, firstPdfArg, resolveLaunchTarget } = require('./utils/pdf-helpers');
-const { PDFDocument } = require("pdf-lib");
+const { PDFDocument, degrees } = require("pdf-lib");
 const fileAssoc = require("./services/file-association");
 
 const SMOKE = process.argv.includes("--smoke") || process.env.PDFVIEWER_SMOKE === "1";
@@ -134,14 +134,19 @@ async function readPdfFolder(folderPath) {
     }
 
     const files = [];
+    const skipped = [];
     for (const entry of pdfEntries) {
       const filePath = path.join(folderPath, entry.name);
-      const data = await fs.readFile(filePath);
-      files.push({
-        name: entry.name,
-        path: filePath,
-        data: new Uint8Array(data),
-      });
+      try {
+        const data = await fs.readFile(filePath);
+        files.push({
+          name: entry.name,
+          path: filePath,
+          data: new Uint8Array(data),
+        });
+      } catch (fileErr) {
+        skipped.push({ name: entry.name, error: fileErr && fileErr.message ? fileErr.message : String(fileErr) });
+      }
     }
 
     return {
@@ -149,6 +154,7 @@ async function readPdfFolder(folderPath) {
       files,
       folderName,
       count: files.length,
+      skipped,
     };
   } catch (err) {
     return {
@@ -396,6 +402,89 @@ if (!gotLock) {
       } catch (err) {
         return { success: false, error: err && err.message ? err.message : String(err) };
       }
+    });
+
+    ipcMain.handle("pdf:delete-page", async (_event, { pdfData, pageIndex }) => {
+      try {
+        const doc = await PDFDocument.load(pdfData);
+        if (doc.getPageCount() <= 1) {
+          return { success: false, error: "Cannot delete the only page in document." };
+        }
+        doc.removePage(pageIndex);
+        const modified = await doc.save();
+        return { success: true, data: new Uint8Array(modified) };
+      } catch (err) {
+        return { success: false, error: err && err.message ? err.message : String(err) };
+      }
+    });
+
+    ipcMain.handle("pdf:rotate-page", async (_event, { pdfData, pageIndex, rotationDelta = 90 }) => {
+      try {
+        const doc = await PDFDocument.load(pdfData);
+        const page = doc.getPage(pageIndex);
+        const currentRot = page.getRotation().angle;
+        const newRot = (currentRot + rotationDelta) % 360;
+        page.setRotation(degrees(newRot));
+        const modified = await doc.save();
+        return { success: true, data: new Uint8Array(modified) };
+      } catch (err) {
+        return { success: false, error: err && err.message ? err.message : String(err) };
+      }
+    });
+
+    ipcMain.handle("pdf:extract-pages", async (_event, { pdfData, pageIndices, defaultName }) => {
+      try {
+        const doc = await PDFDocument.load(pdfData);
+        const newDoc = await PDFDocument.create();
+        const indices = Array.isArray(pageIndices) ? pageIndices : [pageIndices];
+        const copied = await newDoc.copyPages(doc, indices);
+        for (const p of copied) {
+          newDoc.addPage(p);
+        }
+        const modified = await newDoc.save();
+        const result = await dialog.showSaveDialog(mainWindow, {
+          title: "Save Extracted Page(s) as PDF",
+          defaultPath: defaultName || "extracted-page.pdf",
+          filters: [{ name: "PDF documents", extensions: ["pdf"] }],
+        });
+        if (result.canceled || !result.filePath) return { canceled: true };
+        await fs.writeFile(result.filePath, Buffer.from(modified));
+        return { canceled: false, filePath: result.filePath, name: path.basename(result.filePath) };
+      } catch (err) {
+        return { success: false, error: err && err.message ? err.message : String(err) };
+      }
+    });
+
+    ipcMain.handle("dialog:save-image", async (_event, { dataUrl, defaultName }) => {
+      try {
+        const result = await dialog.showSaveDialog(mainWindow, {
+          title: "Export Page as Image",
+          defaultPath: defaultName || "page-export.png",
+          filters: [
+            { name: "PNG Image", extensions: ["png"] },
+            { name: "JPEG Image", extensions: ["jpg", "jpeg"] },
+          ],
+        });
+        if (result.canceled || !result.filePath) return { canceled: true };
+        const base64Data = dataUrl.replace(/^data:image\/\w+;base64,/, "");
+        await fs.writeFile(result.filePath, Buffer.from(base64Data, "base64"));
+        return { canceled: false, filePath: result.filePath, name: path.basename(result.filePath) };
+      } catch (err) {
+        return { canceled: true, error: err && err.message ? err.message : String(err) };
+      }
+    });
+
+    ipcMain.handle("app:toggle-fullscreen", () => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        const next = !mainWindow.isFullScreen();
+        mainWindow.setFullScreen(next);
+        return next;
+      }
+      return false;
+    });
+
+    ipcMain.handle("app:is-fullscreen", () => {
+      return mainWindow && !mainWindow.isDestroyed() ? mainWindow.isFullScreen() : false;
     });
 
     ipcMain.handle("file:read", async (_event, filePath) => {

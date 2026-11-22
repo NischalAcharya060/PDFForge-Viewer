@@ -2,7 +2,7 @@ import { state, tabs, activeTabId } from '../core/state.js';
 import { el } from '../core/elements.js';
 import { toggleFindBar } from '../features/search/search.js';
 import { renderRecentFiles, saveRecentFile } from './recent-files.js';
-import { updateControls, updateZoomSelect, layoutPages, syncFitButtons, buildPages } from '../features/viewer/viewer.js';
+import { updateControls, updateZoomSelect, layoutPages, syncFitButtons, buildPages, stopSpeechReadAloud } from '../features/viewer/viewer.js';
 import { buildOutline, buildThumbnails, updateActiveThumb } from '../features/thumbnails/thumbnails.js';
 import { renderTabBar, openMultipleFiles } from '../features/tabs/tabs.js';
 import { leaveEditor } from '../features/editor/editor.js';
@@ -12,6 +12,7 @@ import { showToast } from '../components/toast.js';
 
 export async function destroyDocument() {
   toggleFindBar(false);
+  stopSpeechReadAloud();
   for (const p of state.pages) {
     if (p.annotDiv) {
       p.annotDiv.textContent = "";

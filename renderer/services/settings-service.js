@@ -14,6 +14,13 @@ export const DEFAULT_SETTINGS = {
   invertPdfColors: false, // Dark reader mode for PDF canvases
   smoothScroll: false, // Smooth scrolling off by default for instant, crisp scrolling
 
+  // Text-to-Speech (Read Aloud)
+  speechVoice: '', // Voice URI or name (empty = system default)
+  speechRate: 1.0, // 0.75, 1.0, 1.25, 1.5, 2.0
+  speechPitch: 1.0, // 0.8 (Deep), 1.0 (Natural), 1.2 (High), 1.4 (Higher)
+  speechVolume: 1.0, // 0.6, 0.8, 1.0
+  speechMode: 'auto', // 'auto' (selected text if any, else page) | 'page'
+
   // Sidebar Defaults
   sidebarDefaultState: 'closed', // 'closed' | 'open'
   defaultSidebarTab: 'thumbs', // 'thumbs' | 'outline'

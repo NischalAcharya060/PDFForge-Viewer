@@ -267,6 +267,16 @@ async function runAppSmoke({ app, mainWindow }) {
 
     // Switch back to viewer tab, update preference to 150%, and save
     await mainWindow.webContents.executeJavaScript("document.querySelector('.settings-tab-btn[data-tab=\"viewer\"]').click();");
+    // Verify Settings tab scroll buttons and speech elements
+    const tabsControlsOk = await mainWindow.webContents.executeJavaScript(
+      "Boolean(document.getElementById('btn-settings-tabs-prev')) && " +
+      "Boolean(document.getElementById('btn-settings-tabs-next')) && " +
+      "Boolean(document.getElementById('btn-test-voice')) && " +
+      "Boolean(document.getElementById('setting-speech-pitch'))"
+    );
+    console.log("[smoke] settings tabs scroll buttons & voice speech controls ok:", Boolean(tabsControlsOk));
+    if (!tabsControlsOk) throw new Error("Settings tab scroll buttons or voice speech controls missing");
+
     await mainWindow.webContents.executeJavaScript("document.getElementById('setting-default-zoom').value = '150';");
     await mainWindow.webContents.executeJavaScript("document.getElementById('setting-invert-colors').checked = true;");
     await mainWindow.webContents.executeJavaScript("document.getElementById('btn-apply-icon').click();");
@@ -356,6 +366,32 @@ async function runAppSmoke({ app, mainWindow }) {
     );
     console.log("[smoke] split view closed ok:", Boolean(splitClosed));
     if (!splitClosed) throw new Error("Split view close button did not close pane");
+
+    // Verify New Features: Page Tools Dropdown & Actions
+    console.log("[smoke] Verifying Page Tools, Speech, and Fullscreen Mode features...");
+    const pageToolsBtnOk = await mainWindow.webContents.executeJavaScript(
+      "!document.getElementById('btn-add-page').disabled"
+    );
+    console.log("[smoke] Page Tools button active on PDF:", Boolean(pageToolsBtnOk));
+    if (!pageToolsBtnOk) throw new Error("btn-add-page should be enabled when a PDF is open");
+
+    // Click Page Tools button and check menu visibility
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-add-page').click();");
+    const pageMenuVisible = await mainWindow.webContents.executeJavaScript("!document.getElementById('add-page-menu').hidden");
+    console.log("[smoke] Page Tools menu opened:", Boolean(pageMenuVisible));
+    if (!pageMenuVisible) throw new Error("add-page-menu did not open when btn-add-page clicked");
+
+    // Close Page Tools menu
+    await mainWindow.webContents.executeJavaScript("document.getElementById('btn-add-page').click();");
+
+    // Verify Read Aloud & Fullscreen buttons
+    const speechBtnOk = await mainWindow.webContents.executeJavaScript("!document.getElementById('btn-speech').disabled");
+    console.log("[smoke] Speech button enabled:", Boolean(speechBtnOk));
+    if (!speechBtnOk) throw new Error("btn-speech should be enabled when a PDF is open");
+
+    const fullscreenBtnOk = await mainWindow.webContents.executeJavaScript("Boolean(document.getElementById('btn-fullscreen'))");
+    console.log("[smoke] Fullscreen button present:", Boolean(fullscreenBtnOk));
+    if (!fullscreenBtnOk) throw new Error("btn-fullscreen missing");
 
     console.log("[smoke] PASS");
     app.exit(0);

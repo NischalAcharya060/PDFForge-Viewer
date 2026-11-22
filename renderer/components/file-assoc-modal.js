@@ -227,6 +227,68 @@ export function selectIconCard(iconId) {
   }
 }
 
+export function detectVoiceGender(voice) {
+  if (!voice) return null;
+  const name = (voice.name || "").toLowerCase();
+  const uri = (voice.voiceURI || "").toLowerCase();
+  const combined = `${name} ${uri}`;
+
+  if (/\b(female|woman|girl|femme|weiblich|donna|mujer|feminino)\b/i.test(combined)) {
+    return "Female";
+  }
+  if (/\b(male|man|boy|homme|m\u00e4nnlich|uomo|hombre|masculino)\b/i.test(combined)) {
+    return "Male";
+  }
+
+  const femaleNames = [
+    "zira", "hazel", "susan", "samantha", "victoria", "katherine", "caren",
+    "helena", "eva", "elena", "laura", "julie", "alice", "fiona", "karen",
+    "tessa", "veena", "moira", "alva", "yuri", "kyoko", "ting-ting", "sin-ji",
+    "mei-jia", "huihui", "yaoyao", "hanhan", "yating", "kanya", "monica",
+    "paulina", "joana", "luciana", "sara", "anna", "milena", "mariska",
+    "damayanti", "heera", "hedda", "hortense", "elsa", "sabina", "irina",
+    "haruka", "ayumi", "sayaka", "siri", "ava", "allison", "serena", "zoe"
+  ];
+  for (const fn of femaleNames) {
+    if (new RegExp(`\\b${fn}\\b`, "i").test(combined)) {
+      return "Female";
+    }
+  }
+
+  const maleNames = [
+    "david", "mark", "george", "ravi", "richard", "james", "john", "alex",
+    "fred", "daniel", "oliver", "thomas", "diego", "jorge", "juan", "carlos",
+    "kangkang", "danny", "stefan", "pavel", "tarik", "cosimo", "magnus",
+    "zhiwei", "ichiro", "adam", "raul", "pablo", "claude", "tom", "bruce",
+    "ralph", "lee", "nathan", "aaron"
+  ];
+  for (const mn of maleNames) {
+    if (new RegExp(`\\b${mn}\\b`, "i").test(combined)) {
+      return "Male";
+    }
+  }
+
+  return null;
+}
+
+export function populateVoiceList() {
+  if (!el.settingSpeechVoice || typeof window === "undefined" || !window.speechSynthesis) return;
+  const voices = window.speechSynthesis.getVoices();
+  const currentVal = el.settingSpeechVoice.value;
+  el.settingSpeechVoice.innerHTML = '<option value="">Default System Voice</option>';
+  for (const voice of voices) {
+    const opt = document.createElement("option");
+    opt.value = voice.voiceURI || voice.name;
+    const gender = detectVoiceGender(voice);
+    const tag = gender === "Female" ? "[Female] " : gender === "Male" ? "[Male] " : "";
+    opt.textContent = `${tag}${voice.name} (${voice.lang})${voice.default ? ' — Default' : ''}`;
+    el.settingSpeechVoice.appendChild(opt);
+  }
+  if (currentVal) {
+    el.settingSpeechVoice.value = currentVal;
+  }
+}
+
 export function populateSettingsForm(settings = getSettings()) {
   if (el.settingDefaultZoom) {
     el.settingDefaultZoom.value = settings.defaultZoom || "125";
@@ -248,6 +310,22 @@ export function populateSettingsForm(settings = getSettings()) {
   }
   if (el.settingSmoothScroll) {
     el.settingSmoothScroll.checked = Boolean(settings.smoothScroll);
+  }
+  populateVoiceList();
+  if (el.settingSpeechVoice && settings.speechVoice) {
+    el.settingSpeechVoice.value = settings.speechVoice;
+  }
+  if (el.settingSpeechRate) {
+    el.settingSpeechRate.value = String(settings.speechRate || 1.0);
+  }
+  if (el.settingSpeechPitch) {
+    el.settingSpeechPitch.value = String(settings.speechPitch || 1.0);
+  }
+  if (el.settingSpeechVolume) {
+    el.settingSpeechVolume.value = String(settings.speechVolume || 1.0);
+  }
+  if (el.settingSpeechMode) {
+    el.settingSpeechMode.value = settings.speechMode || "auto";
   }
   if (el.settingSidebarState) {
     el.settingSidebarState.value = settings.sidebarDefaultState || "closed";
@@ -274,8 +352,16 @@ export function switchSettingsTab(tabName = "viewer") {
   tabs.forEach((t) => {
     const btn = document.querySelector(`.settings-tab-btn[data-tab="${t}"]`);
     const panel = document.getElementById(`tab-panel-${t}`);
-    if (btn) btn.classList.toggle("active", t === tabName);
-    if (panel) panel.hidden = (t !== tabName);
+    const isActive = (t === tabName);
+    if (btn) {
+      btn.classList.toggle("active", isActive);
+      if (isActive) {
+        try {
+          btn.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+        } catch {}
+      }
+    }
+    if (panel) panel.hidden = !isActive;
   });
 }
 
@@ -286,6 +372,18 @@ export async function showFileAssocModal(initialTab = "viewer") {
   // Populate settings form and activate initial tab
   populateSettingsForm();
   switchSettingsTab(initialTab);
+  setTimeout(() => {
+    if (!el.settingsTabsBar) return;
+    const isOverflowing = el.settingsTabsBar.scrollWidth > (el.settingsTabsBar.clientWidth + 4);
+    const wrapper = el.settingsTabsBar.closest(".settings-tabs-wrapper");
+    if (wrapper) {
+      wrapper.classList.toggle("has-overflow", isOverflowing);
+    }
+    const canLeft = el.settingsTabsBar.scrollLeft > 2;
+    const canRight = el.settingsTabsBar.scrollLeft < (el.settingsTabsBar.scrollWidth - el.settingsTabsBar.clientWidth - 2);
+    if (el.btnSettingsTabsPrev) el.btnSettingsTabsPrev.disabled = !canLeft;
+    if (el.btnSettingsTabsNext) el.btnSettingsTabsNext.disabled = !canRight;
+  }, 100);
 
   // Load preferences
   const prefs = await getFileAssocPrefs();
@@ -406,6 +504,11 @@ export async function handleApplyAllPreferences() {
     theme: el.settingTheme ? el.settingTheme.value : "system",
     invertPdfColors: el.settingInvertColors ? Boolean(el.settingInvertColors.checked) : false,
     smoothScroll: el.settingSmoothScroll ? Boolean(el.settingSmoothScroll.checked) : false,
+    speechVoice: el.settingSpeechVoice ? el.settingSpeechVoice.value : "",
+    speechRate: el.settingSpeechRate ? Number(el.settingSpeechRate.value) || 1.0 : 1.0,
+    speechPitch: el.settingSpeechPitch ? Number(el.settingSpeechPitch.value) || 1.0 : 1.0,
+    speechVolume: el.settingSpeechVolume ? Number(el.settingSpeechVolume.value) || 1.0 : 1.0,
+    speechMode: el.settingSpeechMode ? el.settingSpeechMode.value : "auto",
     sidebarDefaultState: el.settingSidebarState ? el.settingSidebarState.value : "closed",
     defaultSidebarTab: el.settingSidebarTab ? el.settingSidebarTab.value : "thumbs",
     restoreLastPage: el.settingRememberPage ? Boolean(el.settingRememberPage.checked) : false,
@@ -470,13 +573,127 @@ export function initFileAssocModal() {
     el.btnApplyIcon.addEventListener("click", handleApplyAllPreferences);
   }
 
-  // Settings Tabs switching
+  // Settings Tabs switching & scrolling
+  const updateTabScrollArrows = () => {
+    if (!el.settingsTabsBar) return;
+    const isOverflowing = el.settingsTabsBar.scrollWidth > (el.settingsTabsBar.clientWidth + 4);
+    const wrapper = el.settingsTabsBar.closest(".settings-tabs-wrapper");
+    if (wrapper) {
+      wrapper.classList.toggle("has-overflow", isOverflowing);
+    }
+    const canLeft = el.settingsTabsBar.scrollLeft > 2;
+    const canRight = el.settingsTabsBar.scrollLeft < (el.settingsTabsBar.scrollWidth - el.settingsTabsBar.clientWidth - 2);
+    if (el.btnSettingsTabsPrev) el.btnSettingsTabsPrev.disabled = !canLeft;
+    if (el.btnSettingsTabsNext) el.btnSettingsTabsNext.disabled = !canRight;
+  };
+
+  if (el.btnSettingsTabsPrev) {
+    el.btnSettingsTabsPrev.addEventListener("click", () => {
+      if (el.settingsTabsBar) {
+        el.settingsTabsBar.scrollBy({ left: -140, behavior: "smooth" });
+        setTimeout(updateTabScrollArrows, 200);
+      }
+    });
+  }
+
+  if (el.btnSettingsTabsNext) {
+    el.btnSettingsTabsNext.addEventListener("click", () => {
+      if (el.settingsTabsBar) {
+        el.settingsTabsBar.scrollBy({ left: 140, behavior: "smooth" });
+        setTimeout(updateTabScrollArrows, 200);
+      }
+    });
+  }
+
   if (el.settingsTabsBar) {
     el.settingsTabsBar.addEventListener("click", (e) => {
       const btn = e.target.closest(".settings-tab-btn");
       if (btn && btn.dataset.tab) {
         switchSettingsTab(btn.dataset.tab);
+        setTimeout(updateTabScrollArrows, 150);
       }
+    });
+
+    // Side scrolling with mouse wheel
+    el.settingsTabsBar.addEventListener("wheel", (e) => {
+      if (e.deltaY !== 0) {
+        e.preventDefault();
+        el.settingsTabsBar.scrollLeft += e.deltaY;
+        updateTabScrollArrows();
+      }
+    }, { passive: false });
+
+    el.settingsTabsBar.addEventListener("scroll", updateTabScrollArrows, { passive: true });
+
+    // Drag-to-scroll support for settings tabs
+    let isDown = false;
+    let startX = 0;
+    let scrollStart = 0;
+    el.settingsTabsBar.addEventListener("mousedown", (e) => {
+      if (e.target.closest(".settings-tab-btn")) return;
+      isDown = true;
+      startX = e.pageX - el.settingsTabsBar.offsetLeft;
+      scrollStart = el.settingsTabsBar.scrollLeft;
+    });
+    window.addEventListener("mouseup", () => { isDown = false; });
+    window.addEventListener("mousemove", (e) => {
+      if (!isDown || !el.settingsTabsBar) return;
+      e.preventDefault();
+      const x = e.pageX - el.settingsTabsBar.offsetLeft;
+      const walk = (x - startX) * 1.5;
+      el.settingsTabsBar.scrollLeft = scrollStart - walk;
+      updateTabScrollArrows();
+    });
+  }
+
+  // Test selected voice preview
+  if (el.btnTestVoice) {
+    el.btnTestVoice.addEventListener("click", () => {
+      if (typeof window === "undefined" || !window.speechSynthesis) {
+        showToast("Speech synthesis is not supported on this platform.", "warning");
+        return;
+      }
+      if (window.speechSynthesis.speaking) {
+        window.speechSynthesis.cancel();
+        if (el.btnTestVoice) {
+          el.btnTestVoice.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Test Voice</span>`;
+        }
+        return;
+      }
+
+      const voiceVal = el.settingSpeechVoice ? el.settingSpeechVoice.value : "";
+      const rateVal = el.settingSpeechRate ? Number(el.settingSpeechRate.value) || 1.0 : 1.0;
+      const pitchVal = el.settingSpeechPitch ? Number(el.settingSpeechPitch.value) || 1.0 : 1.0;
+      const volVal = el.settingSpeechVolume ? Number(el.settingSpeechVolume.value) || 1.0 : 1.0;
+
+      const utt = new SpeechSynthesisUtterance("Hello! This is a preview of your selected text-to-speech voice.");
+      utt.rate = rateVal;
+      utt.pitch = pitchVal;
+      utt.volume = volVal;
+
+      if (voiceVal) {
+        const voices = window.speechSynthesis.getVoices();
+        const matched = voices.find((v) => (v.voiceURI === voiceVal || v.name === voiceVal));
+        if (matched) utt.voice = matched;
+      }
+
+      utt.onstart = () => {
+        if (el.btnTestVoice) {
+          el.btnTestVoice.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><rect x="6" y="6" width="12" height="12"/></svg><span>Stop</span>`;
+        }
+      };
+      utt.onend = () => {
+        if (el.btnTestVoice) {
+          el.btnTestVoice.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Test Voice</span>`;
+        }
+      };
+      utt.onerror = () => {
+        if (el.btnTestVoice) {
+          el.btnTestVoice.innerHTML = `<svg viewBox="0 0 24 24" fill="currentColor" width="11" height="11"><polygon points="5 3 19 12 5 21 5 3"/></svg><span>Test Voice</span>`;
+        }
+      };
+
+      window.speechSynthesis.speak(utt);
     });
   }
 
@@ -559,7 +776,14 @@ export function initFileAssocModal() {
   window.addEventListener("focus", () => {
     updateDefaultAppStatus();
     updateContextMenuStatus();
+    populateVoiceList();
   });
+
+  if (typeof window !== "undefined" && window.speechSynthesis) {
+    window.speechSynthesis.onvoiceschanged = () => {
+      populateVoiceList();
+    };
+  }
 
   // Initial check on load
   updateDefaultAppStatus();

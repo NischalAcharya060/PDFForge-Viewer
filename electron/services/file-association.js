@@ -588,6 +588,17 @@ const REG_BG_KEY = "HKCU\\Software\\Classes\\Directory\\Background\\shell\\PDFFo
 const REG_DIR_KEY = "HKCU\\Software\\Classes\\Directory\\shell\\PDFForgeViewer";
 
 async function checkContextMenuStatus() {
+  if (process.platform === "linux") {
+    const desktopPath = path.join(os.homedir(), ".local", "share", "applications", LINUX_DESKTOP_FILENAME);
+    try {
+      if (fs.existsSync(desktopPath)) {
+        const content = fs.readFileSync(desktopPath, "utf8");
+        const hasAction = /Actions=.*OpenFolder/i.test(content) || /inode\/directory/i.test(content);
+        return { isEnabled: hasAction, osSupported: true };
+      }
+    } catch {}
+    return { isEnabled: false, osSupported: true };
+  }
   if (process.platform !== "win32") {
     return { isEnabled: false, osSupported: false };
   }
@@ -598,8 +609,39 @@ async function checkContextMenuStatus() {
 }
 
 async function setContextMenuStatus(enabled) {
+  if (process.platform === "linux") {
+    try {
+      const desktopDir = path.join(os.homedir(), ".local", "share", "applications");
+      const desktopPath = path.join(desktopDir, LINUX_DESKTOP_FILENAME);
+      if (!fs.existsSync(desktopPath)) {
+        return { success: false, isEnabled: false, message: "Desktop entry not found.", osSupported: true };
+      }
+      let content = fs.readFileSync(desktopPath, "utf8");
+      if (enabled) {
+        if (!/Actions=.*OpenFolder/i.test(content)) {
+          if (/Actions=/i.test(content)) {
+            content = content.replace(/(Actions=.*)/i, "$1OpenFolder;");
+          } else {
+            content += "\nActions=OpenFolder;\n";
+          }
+        }
+        if (!/\[Desktop Action OpenFolder\]/i.test(content)) {
+          content += "\n[Desktop Action OpenFolder]\nName=Open Folder in PDFForge Viewer\nExec=pdfforge-viewer %F\n";
+        }
+      } else {
+        content = content.replace(/OpenFolder;?/gi, "");
+        content = content.replace(/\[Desktop Action OpenFolder\][\s\S]*?(?=(\[|$))/i, "");
+      }
+      fs.writeFileSync(desktopPath, content.trim() + "\n", "utf8");
+      await notifyShellChange();
+      return { success: true, isEnabled: enabled, message: enabled ? "Enabled in file manager context menu." : "Removed from context menu.", osSupported: true };
+    } catch (err) {
+      return { success: false, error: err && err.message ? err.message : String(err), osSupported: true };
+    }
+  }
+
   if (process.platform !== "win32") {
-    return { success: false, message: "Context menu is only supported on Windows.", osSupported: false };
+    return { success: false, message: "Context menu is only supported on Windows and Linux.", osSupported: false };
   }
 
   if (!enabled) {

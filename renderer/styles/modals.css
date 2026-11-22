@@ -926,19 +926,69 @@
    ========================================================================== */
 
 .file-assoc-dialog {
-  width: 620px;
-  max-width: calc(100vw - 32px);
-  max-height: 88vh;
-  padding: 24px;
+  width: 780px;
+  max-width: min(780px, calc(100vw - 32px));
+  height: 85vh;
+  max-height: 720px;
+  min-height: 480px;
+  display: flex;
+  flex-direction: column;
+  padding: 22px 24px 16px 24px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.file-assoc-dialog .modal-head {
+  flex-shrink: 0;
+  margin-bottom: 6px;
+}
+
+.file-assoc-dialog .settings-tabs-wrapper {
+  flex-shrink: 0;
 }
 
 .file-assoc-body {
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
   gap: 16px;
   overflow-y: auto;
-  padding: 12px 2px 4px 2px;
+  overflow-x: hidden;
+  padding: 10px 6px 16px 2px;
   margin-top: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary, #e5484d) var(--surface, rgba(0, 0, 0, 0.08));
+}
+
+.file-assoc-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.file-assoc-body::-webkit-scrollbar-track {
+  background: var(--surface, rgba(0, 0, 0, 0.08));
+  border-radius: 4px;
+}
+
+.file-assoc-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.file-assoc-body::-webkit-scrollbar-thumb:hover {
+  background: var(--primary, #e5484d);
+}
+
+.file-assoc-dialog .modal-actions {
+  flex-shrink: 0;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  background: var(--surface);
 }
 
 .file-assoc-section {
@@ -1001,32 +1051,91 @@
 }
 
 /* Settings Tabs & Controls */
+.settings-tabs-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 100%;
+  gap: 4px;
+  border-bottom: 1px solid var(--border);
+  padding: 0 0 6px 0;
+}
+
+.tabs-scroll-arrow {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--surface, rgba(255, 255, 255, 0.04));
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.settings-tabs-wrapper.has-overflow .tabs-scroll-arrow {
+  display: flex;
+}
+
+.tabs-scroll-arrow:hover:not(:disabled) {
+  background: var(--surface-hover, rgba(255, 255, 255, 0.1));
+  border-color: var(--primary, #e5484d);
+  color: var(--primary, #e5484d);
+}
+
+.tabs-scroll-arrow:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
 .settings-tabs-bar {
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 0 12px 0;
-  border-bottom: 1px solid var(--border);
+  flex: 1 1 auto;
+  min-width: 0;
+  padding: 2px 2px 4px 2px;
   overflow-x: auto;
-  scrollbar-width: none;
+  overflow-y: hidden;
+  white-space: nowrap;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary, #e5484d) transparent;
 }
 .settings-tabs-bar::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+}
+.settings-tabs-bar::-webkit-scrollbar-track {
+  background: transparent;
+  border-radius: 4px;
+}
+.settings-tabs-bar::-webkit-scrollbar-thumb {
+  background: var(--primary, #e5484d);
+  border-radius: 4px;
+}
+.settings-tabs-bar::-webkit-scrollbar-thumb:hover {
+  background: #c5282d;
 }
 
 .settings-tab-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: 6px;
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--radius-md, 7px);
-  padding: 6px 12px;
-  font-size: 12.5px;
+  padding: 6px 11px;
+  font-size: 12px;
   font-weight: 500;
   color: var(--muted);
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   user-select: none;
 }

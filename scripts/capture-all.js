@@ -88,7 +88,7 @@ app.whenReady().then(async () => {
   const { ipcMain } = require("electron");
   ipcMain.handle("app:get-info", async () => ({
     name: "PDFForge Viewer",
-    version: "1.2.0",
+    version: "1.3.0",
     electron: process.versions.electron || "",
     chrome: process.versions.chrome || "",
     node: process.versions.node || "",
